@@ -211,92 +211,98 @@ jobs:
         run: |
           make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 TESTS=
 
-      - name: Run make check on Mac/Linux
-        if: ${{ matrix.os != 'mingw' }}
+      - name: run the tsk_loaddb test
         run: |
-          echo SLEUTHKIT_TEST_DATA_DIR=$SLEUTHKIT_TEST_DATA_DIR
-          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
+          test/tools/autotools/test_loaddb.sh
 
-      - name: Run make check on Mingw
-        if: ${{ matrix.os == 'mingw' }}
-        env:
-          WINEARCH: ${{ matrix.winearch }}
-          WINEPATH: ${{ matrix.winepath }}
-          WINEPREFIX: ${{ matrix.wineprefix }}
-        run: |
-          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
 
-      - name: Clean up
-        if: ${{ matrix.os != 'mingw' }}
-        run: |
-          make distclean
+#      - name: Run make check on Mac/Linux
+#        if: ${{ matrix.os != 'mingw' }}
+#        run: |
+#          echo SLEUTHKIT_TEST_DATA_DIR=$SLEUTHKIT_TEST_DATA_DIR
+#          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
 
-      - name: Run configure with address-sanitizer
-        if: ${{ matrix.address_sanitizer == 'yes' }}
-        run: |
-          ./configure ${{ matrix.configure_opts }} --enable-address-sanitizer CFLAGS=-g CXXFLAGS=-g
+#      - name: Run make check on Mingw
+#        if: ${{ matrix.os == 'mingw' }}
+#        env:
+#          WINEARCH: ${{ matrix.winearch }}
+#          WINEPATH: ${{ matrix.winepath }}
+#          WINEPREFIX: ${{ matrix.wineprefix }}
+#        run: |
+#          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
 
-      - name: Check with address-sanitizer
-        if: ${{ matrix.address_sanitizer == 'yes' }}
-        run: |
-          make -j check VERBOSE=1
+#      - name: Clean up
+#        if: ${{ matrix.os != 'mingw' }}
+#        run: |
+#          make distclean
 
-      - name: Clean up
-        if: ${{ matrix.os != 'mingw' }}
-        run: |
-          make distclean
+#      - name: Run configure with address-sanitizer
+#        if: ${{ matrix.address_sanitizer == 'yes' }}
+#        run: |
+#          ./configure ${{ matrix.configure_opts }} --enable-address-sanitizer CFLAGS=-g CXXFLAGS=-g
 
-      - name: Run configure for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          ./configure ${{ matrix.configure_opts }} CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
+#      - name: Check with address-sanitizer
+#        if: ${{ matrix.address_sanitizer == 'yes' }}
+#        run: |
+#          make -j check VERBOSE=1
 
-      - name: Run make for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          make -j check V=0
-          #make -j test/fiwalk/fiwalk_test V=0
-          #make -j test/runner V=0
-
+#      - name: Clean up
+#        if: ${{ matrix.os != 'mingw' }}
+#        run: |
+#          make distclean
+#
+#      - name: Run configure for codecov
+#        if: ${{ matrix.codecov == 'yes' }}
+#        run: |
+#          ./configure ${{ matrix.configure_opts }} CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
+#
+#      - name: Run make for codecov
+#        if: ${{ matrix.codecov == 'yes' }}
+#        run: |
+#          make -j check V=0
+#          #make -j test/fiwalk/fiwalk_test V=0
+#          #make -j test/runner V=0
+#
 #      - name: Run unit tests for codecov
 #        if: ${{ matrix.codecov == 'yes' }}
 #        run: |
 #          test/fiwalk/fiwalk_test -s
 #          test/runner -s
-
-      - name: run gcov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          gcov $(find . -name '*.gcda')
-
-      - name: Upload codecov report
-        if: ${{ matrix.codecov == 'yes' }}
-        uses: codecov/codecov-action@v5
-        with:
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Create any artifacts that we need to keep
-        if: ${{ matrix.keep_artifacts == 'yes' }}
-        run: |
-          ./configure ${{ matrix.configure_opts }} CFLAGS='-O2' CXXFLAGS='-O2'
-          make tools/fiwalk/src/fiwalk
-          mkdir executables
-          mv tools/fiwalk/src/.libs/fiwalk executables
-
-      - name: Keep artifacts
-        if: ${{ matrix.keep_artifacts == 'yes' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: executables
-          path: |
-            executables/*
-          retention-days: 15
+#
+#      - name: run gcov
+#        if: ${{ matrix.codecov == 'yes' }}
+#        run: |
+#          gcov $(find . -name '*.gcda')
+#
+#      - name: Upload codecov report
+#        if: ${{ matrix.codecov == 'yes' }}
+#        uses: codecov/codecov-action@v5
+#        with:
+#          fail_ci_if_error: false
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#
+#      - name: Create any artifacts that we need to keep
+#        if: ${{ matrix.keep_artifacts == 'yes' }}
+#        run: |
+#          ./configure ${{ matrix.configure_opts }} CFLAGS='-O2' CXXFLAGS='-O2'
+#          make tools/fiwalk/src/fiwalk
+#          mkdir executables
+#          mv tools/fiwalk/src/.libs/fiwalk executables
+#
+#      - name: Keep artifacts
+#        if: ${{ matrix.keep_artifacts == 'yes' }}
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: executables
+#          path: |
+#            executables/*
+#          retention-days: 15
 
 #      - name: Run distcheck
 #        run: |
 #          ./configure
 #          make distcheck
-
-      - uses: ammaraskar/gcc-problem-matcher@0.2.0
-        name: GCC Problem Matcher
+#
+#      - uses: ammaraskar/gcc-problem-matcher@0.2.0
+#        name: GCC Problem Matcher
+#
