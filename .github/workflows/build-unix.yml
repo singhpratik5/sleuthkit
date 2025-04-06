@@ -64,64 +64,6 @@ jobs:
             keep_artifacts: "no"
             enable_java: "yes"
 
-          - os: "mingw"
-            arch: "x86_64"
-            linkage: "shared"
-            compiler: "gcc"
-            runner: "ubuntu-24.04"
-            configure_opts: "--host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --disable-java --enable-shared --disable-static"
-            winearch: 'win64'
-            winepath: 'Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix'
-            wineprefix: '/home/runner/.wine64'
-            codecov: "no"
-            prefix: ""
-            address_sanitizer: "no"
-            keep_artifacts: "no"
-
-          - os: "mingw"
-            arch: "x86_64"
-            linkage: "static"
-            compiler: "gcc"
-            runner: "ubuntu-24.04"
-            configure_opts: "--host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --disable-java --disable-shared --enable-static"
-            winearch: 'win64'
-            winepath: 'Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix'
-            wineprefix: '/home/runner/.wine64'
-            codecov: "no"
-            prefix: ""
-            address_sanitizer: "no"
-            keep_artifacts: "no"
-
-          - os: "mingw"
-            arch: "i686"
-            linkage: "shared"
-            compiler: "gcc"
-            runner: "ubuntu-24.04"
-            configure_opts:   "--host=i686-w64-mingw32 --target=i686-w64-mingw32 --enable-shared --disable-static --disable-java"
-            configure_optsnj: "--host=i686-w64-mingw32 --target=i686-w64-mingw32 --enable-shared --disable-static"
-            winearch: 'win32'
-            winepath: 'Z:\usr\lib\gcc\i686-w64-mingw32\13-posix'
-            wineprefix: '/home/runner/.wine32'
-            codecov: "no"
-            prefix: ""
-            address_sanitizer: "no"
-            keep_artifacts: "no"
-
-          - os: "mingw"
-            arch: "i686"
-            linkage: "static"
-            runner: "ubuntu-24.04"
-            compiler: "gcc"
-            configure_opts:   "--host=i686-w64-mingw32 --target=i686-w64-mingw32 --disable-shared --enable-static --disable-java"
-            configure_optsnj: "--host=i686-w64-mingw32 --target=i686-w64-mingw32 --disable-shared --enable-static"
-            winearch: 'win32'
-            winepath: 'Z:\usr\lib\gcc\i686-w64-mingw32\13-posix'
-            wineprefix: '/home/runner/.wine32'
-            codecov: "no"
-            prefix: ""
-            address_sanitizer: "no"
-            keep_artifacts: "no"
-
     steps:
       - name: Determine number of cores
         id: cores
@@ -251,14 +193,15 @@ jobs:
 #        run: |
 #          make distclean
 #
-#      - name: Run configure for codecov
-#        if: ${{ matrix.codecov == 'yes' }}
-#        run: |
-#          ./configure ${{ matrix.configure_opts }} CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
-#
-#      - name: Run make for codecov
-#        if: ${{ matrix.codecov == 'yes' }}
-#        run: |
+      - name: Run configure for codecov
+        if: ${{ matrix.codecov == 'yes' }}
+        run: |
+          ./configure ${{ matrix.configure_opts }} CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
+
+      - name: Run test_loaddb.sh
+        run: |
+          test/tools/autotools/test_loaddb.sh
+
 #          make -j check V=0
 #          #make -j test/fiwalk/fiwalk_test V=0
 #          #make -j test/runner V=0
@@ -269,17 +212,17 @@ jobs:
 #          test/fiwalk/fiwalk_test -s
 #          test/runner -s
 #
-#      - name: run gcov
-#        if: ${{ matrix.codecov == 'yes' }}
-#        run: |
-#          gcov $(find . -name '*.gcda')
-#
-#      - name: Upload codecov report
-#        if: ${{ matrix.codecov == 'yes' }}
-#        uses: codecov/codecov-action@v5
-#        with:
-#          fail_ci_if_error: false
-#          token: ${{ secrets.CODECOV_TOKEN }}
+      - name: run gcov
+        if: ${{ matrix.codecov == 'yes' }}
+        run: |
+          gcov $(find . -name '*.gcda')
+
+      - name: Upload codecov report
+        if: ${{ matrix.codecov == 'yes' }}
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 #
 #      - name: Create any artifacts that we need to keep
 #        if: ${{ matrix.keep_artifacts == 'yes' }}
