@@ -253,14 +253,6 @@ jobs:
         if: ${{ matrix.codecov == 'yes' }}
         run: |
           make -j check V=0
-          #make -j test/fiwalk/fiwalk_test V=0
-          #make -j test/runner V=0
-
-#      - name: Run unit tests for codecov
-#        if: ${{ matrix.codecov == 'yes' }}
-#        run: |
-#          test/fiwalk/fiwalk_test -s
-#          test/runner -s
 
       - name: run gcov
         if: ${{ matrix.codecov == 'yes' }}

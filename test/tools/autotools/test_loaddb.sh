@@ -4,6 +4,13 @@ if [ -n "$WINE" ]; then
   EXEEXT=.exe
 fi
 
+if [ ! -d ${SLEUTHKIT_TEST_DATA_DIR:=../sleuthkit_test_data} ];
+then
+    echo $SLEUTHKIT_TEST_DATA_DIR does not exist ;
+    exit 1 ;
+fi
+
+
 doit () {
     echo scan $1
     /bin/rm -f testdb.db
