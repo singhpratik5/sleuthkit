@@ -13845,9 +13845,6 @@ public class SleuthkitCase {
 	private final class SQLiteConnections extends ConnectionPool {
 
 		private final Map<String, String> configurationOverrides = new HashMap<String, String>();
-		
-		// the total time taken to run PRAGMA OPTIMIZE. 
-		private final AtomicLong timeInOptimize = new AtomicLong(0);
 
 		SQLiteConnections(String dbPath, boolean useWAL) throws SQLException {
 			configurationOverrides.put("acquireIncrement", "2");
@@ -13883,40 +13880,9 @@ public class SleuthkitCase {
 				}
 			}
 			java.sql.Connection conn = getPooledDataSource().getConnection();
-			runOptimize(conn);
 			CaseDbConnection caseDbConn = new SQLiteConnection(conn);
 			return caseDbConn;
 		}
-
-		/**
-		 * Performs optimization based on
-		 * https://www.sqlite.org/pragma.html#pragma_optimize advice regarding
-		 * long-lived connections.
-		 */
-		private void runOptimize(java.sql.Connection conn) {
-
-			// get current time
-			long thisStart = System.currentTimeMillis();
-
-			// run optimize
-			try (Statement statement = conn.createStatement()) {
-				statement.execute("PRAGMA optimize");
-			} catch (Throwable t) {
-				logger.log(Level.WARNING, "Unable to do optimization of database", t);
-			}
-
-			// track time taken
-			long endTime = System.currentTimeMillis();
-			timeInOptimize.addAndGet(endTime - thisStart);
-		}
-
-		@Override
-		void close() throws TskCoreException {
-			logger.info("Time running 'PRAGMA optimize' was " + this.timeInOptimize + "ms.");
-			super.close();
-		}
-		
-		
 	}
 
 	/**

@@ -730,6 +730,28 @@ public final class CaseDbAccessManager {
 	}
 	
 	/**
+	 * Performs a select statement query with the given case prepared statement.
+	 *
+	 * @param preparedStatement The case prepared statement.
+	 * @param runOptimize       Runs optimization before executing the query.
+	 * @param queryCallback     The callback to handle the result set.
+	 *
+	 * @throws TskCoreException
+	 */
+	@Beta
+	public void select(CaseDbPreparedStatement preparedStatement, boolean runOptimize, CaseDbAccessQueryCallback queryCallback) throws TskCoreException {
+		if (runOptimize && this.tskDB.getDatabaseType() == DbType.SQLITE) {
+			try (Statement optimizeStmt = preparedStatement.connection.createStatement()) {
+				optimizeStmt.execute("PRAGMA optimize");
+			} catch (SQLException ex) {
+				throw new TskCoreException("An error occurred while attempting to optimize the call", ex);
+			}
+		}
+		
+		select(preparedStatement, queryCallback);
+	}
+	
+	/**
 	 * Creates a prepared statement object for the purposes of running an insert
 	 * statement. The given SQL should not include the starting "INSERT INTO" 
 	 * or the name of the table.
