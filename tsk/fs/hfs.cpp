@@ -76,6 +76,7 @@
 #include "decmpfs.h"
 
 #include <memory>
+#include <new>
 
 #include <stdarg.h>
 #ifdef TSK_WIN32
@@ -309,7 +310,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
     TSK_FS_INFO *fs = (TSK_FS_INFO *) & (hfs->fs_info);
     uint16_t nodesize;          /* size of nodes (all, regardless of the name) */
     uint32_t cur_node;          /* node id of the current node */
-    char *node = NULL;
     uint8_t is_done;
     uint8_t desiredType;
 
@@ -367,7 +367,8 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
 
     // allocate a node buffer
     nodesize = tsk_getu16(fs->endian, hfs->extents_header.nodesize);
-    if ((node = (char *) tsk_malloc(nodesize)) == NULL) {
+    std::unique_ptr<char[]> node{new(std::nothrow) char[nodesize]};
+    if (!node) {
         return 1;
     }
 
@@ -382,7 +383,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
         if (tsk_verbose)
             tsk_fprintf(stderr, "hfs_ext_find_extent_record: "
                 "empty extents btree\n");
-        free(node);
         return 0;
     }
 
@@ -406,7 +406,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
             tsk_error_set_errstr
                 ("hfs_ext_find_extent_record_attr: Node %d too large for file",
                 cur_node);
-            free(node);
             return 1;
         }
 
@@ -418,7 +417,7 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                 " at offset %" PRIdOFF "\n", cur_node, cur_off);
 
         cnt = tsk_fs_attr_read(hfs->extents_attr, cur_off,
-            node, nodesize, TSK_FS_FILE_READ_FLAG_NONE);
+            node.get(), nodesize, TSK_FS_FILE_READ_FLAG_NONE);
         if (cnt != nodesize) {
             if (cnt >= 0) {
                 tsk_error_reset();
@@ -427,7 +426,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
             tsk_error_set_errstr2
                 ("hfs_ext_find_extent_record_attr: Error reading node %d at offset %"
                 PRIdOFF, cur_node, cur_off);
-            free(node);
             return 1;
         }
 
@@ -436,10 +434,9 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
             tsk_error_set_errno(TSK_ERR_FS_GENFS);
             tsk_error_set_errstr
                 ("hfs_ext_find_extent_record_attr: Node size %d is too small to be valid", nodesize);
-            free(node);
             return 1;
         }
-        node_desc = (hfs_btree_node *) node;
+        node_desc = (hfs_btree_node *) node.get();
         num_rec = tsk_getu16(fs->endian, node_desc->num_rec);
 
         if (num_rec == 0) {
@@ -447,10 +444,8 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
             tsk_error_set_errstr
                 ("hfs_ext_find_extent_record: zero records in node %"
                 PRIu32, cur_node);
-            free(node);
             return 1;
         }
-
 
         /* With an index node, find the record with the largest key that is smaller
          * to or equal to cnid */
@@ -476,7 +471,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                     tsk_error_set_errstr
                         ("hfs_ext_find_extent_record: offset of record %d in leaf node %d too small (%"
                         PRIu16 ")", rec, cur_node, nodesize);
-                    free(node);
                     return 1;
                 }
                 // get the record offset in the node
@@ -489,7 +483,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                         ("hfs_ext_find_extent_record_attr: offset of record %d in index node %d too large (%d vs %"
                         PRIu16 ")", rec, cur_node, (int) rec_off,
                         nodesize);
-                    free(node);
                     return 1;
                 }
                 key = (hfs_btree_key_ext *) & node[rec_off];
@@ -515,10 +508,9 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                     if (nodesize < 4 || keylen + 4 > nodesize || rec_off >= nodesize - 4 - keylen) {
                         tsk_error_set_errno(TSK_ERR_FS_GENFS);
                         tsk_error_set_errstr
-                            ("hfs_ext_find_extent_record_attr: offset and keylenth of record %d in index node %d too large (%" PRIu64 " vs %"
+                            ("hfs_ext_find_extent_record_attr: offset and keylenth of record %d in index node %d too large (%" PRIuSIZE " vs %"
                             PRIu16 ")", rec, cur_node,
                             rec_off + keylen, nodesize);
-                        free(node);
                         return 1;
                     }
                     idx_rec =
@@ -571,7 +563,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                     tsk_error_set_errstr
                         ("hfs_ext_find_extent_record_attr: offset of record %d in leaf node %d too small (%"
                         PRIu16 ")", rec, cur_node, nodesize);
-                    free(node);
                     return 1;
                 }
                 // get the record offset in the node
@@ -585,7 +576,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                         ("hfs_ext_find_extent_record_attr: offset of record %d in leaf node %d too large (%d vs %"
                         PRIu16 ")", rec, cur_node, (int) rec_off,
                         nodesize);
-                    free(node);
                     return 1;
                 }
 
@@ -593,9 +583,8 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                 if (sizeof(hfs_btree_key_ext) > nodesize - rec_off) {
                     tsk_error_set_errno(TSK_ERR_FS_GENFS);
                     tsk_error_set_errstr
-                    ("hfs_ext_find_extent_record_attr: record %d in leaf node %d truncated (have %d vs %" PRIu64 " bytes)", rec, cur_node, nodesize - (int)rec_off,
+                    ("hfs_ext_find_extent_record_attr: record %d in leaf node %d truncated (have %d vs %" PRIuSIZE " bytes)", rec, cur_node, nodesize - (int)rec_off,
                         sizeof(hfs_btree_key_ext));
-                    free(node);
                     return 1;
                 }
 
@@ -652,7 +641,6 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                         ("hfs_ext_find_extent_record_attr: offset and keylenth of record %d in leaf node %d too large (%d vs %"
                         PRIu16 ")", rec, cur_node, (int) rec_off + keylen,
                         nodesize);
-                    free(node);
                     return 1;
                 }
 
@@ -667,14 +655,12 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
                 if ((attr_run == NULL) && (tsk_error_get_errno() != 0)) {
                     tsk_error_errstr2_concat
                         (" - hfs_ext_find_extent_record_attr");
-                    free(node);
                     return 1;
                 }
 
                 if (tsk_fs_attr_add_run(fs, a_attr, attr_run)) {
                     tsk_error_errstr2_concat
                         (" - hfs_ext_find_extent_record_attr");
-                    free(node);
                     return 1;
                 }
             }
@@ -689,11 +675,10 @@ hfs_ext_find_extent_record_attr(HFS_INFO * hfs, uint32_t cnid,
             tsk_error_set_errstr("hfs_ext_find_extent_record: btree node %"
                 PRIu32 " (%" PRIdOFF ") is neither index nor leaf (%" PRIu8
                 ")", cur_node, cur_off, node_desc->type);
-            free(node);
             return 1;
         }
     }
-    free(node);
+
     return 0;
 }
 
@@ -746,7 +731,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
 {
     TSK_FS_INFO *fs = &(hfs->fs_info);
     uint32_t cur_node;          /* node id of the current node */
-    char *node;
 
     uint16_t nodesize;
     uint8_t is_done = 0;
@@ -754,8 +738,10 @@ hfs_cat_traverse(HFS_INFO * hfs,
     tsk_error_reset();
 
     nodesize = tsk_getu16(fs->endian, hfs->catalog_header.nodesize);
-    if ((node = (char *) tsk_malloc(nodesize)) == NULL)
+    std::unique_ptr<char[]> node{new(std::nothrow) char[nodesize]};
+    if (!node) {
         return 1;
+    }
 
     /* start at root node */
     cur_node = tsk_getu32(fs->endian, hfs->catalog_header.rootNode);
@@ -768,7 +754,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
         if (tsk_verbose)
             tsk_fprintf(stderr, "hfs_cat_traverse: "
                 "empty extents btree\n");
-        free(node);
         return 1;
     }
 
@@ -791,14 +776,13 @@ hfs_cat_traverse(HFS_INFO * hfs,
             tsk_error_set_errno(TSK_ERR_FS_GENFS);
             tsk_error_set_errstr
                 ("hfs_cat_traverse: Node %d too large for file", cur_node);
-            free(node);
             return 1;
         }
 
         // read the current node
         cur_off = (TSK_OFF_T)cur_node * nodesize;
         cnt = tsk_fs_attr_read(hfs->catalog_attr, cur_off,
-            node, nodesize,  TSK_FS_FILE_READ_FLAG_NONE);
+            node.get(), nodesize,  TSK_FS_FILE_READ_FLAG_NONE);
         if (cnt != nodesize) {
             if (cnt >= 0) {
                 tsk_error_reset();
@@ -807,7 +791,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
             tsk_error_set_errstr2
                 ("hfs_cat_traverse: Error reading node %d at offset %"
                 PRIdOFF, cur_node, cur_off);
-            free(node);
             return 1;
         }
 
@@ -816,10 +799,9 @@ hfs_cat_traverse(HFS_INFO * hfs,
             tsk_error_set_errno(TSK_ERR_FS_GENFS);
             tsk_error_set_errstr
             ("hfs_cat_traverse: Node size %d is too small to be valid", nodesize);
-            free(node);
             return 1;
         }
-        node_desc = (hfs_btree_node *) node;
+        node_desc = (hfs_btree_node *) node.get();
         num_rec = tsk_getu16(fs->endian, node_desc->num_rec);
 
         if (tsk_verbose)
@@ -831,7 +813,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
             tsk_error_set_errno(TSK_ERR_FS_GENFS);
             tsk_error_set_errstr("hfs_cat_traverse: zero records in node %"
                 PRIu32, cur_node);
-            free(node);
             return 1;
         }
 
@@ -854,7 +835,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
                     tsk_error_set_errstr
                         ("hfs_cat_traverse: offset of record %d in leaf node %d too small (%"
                         PRIu16 ")", rec, cur_node, nodesize);
-                    free(node);
                     return 1;
                 }
                 // get the record offset in the node
@@ -869,7 +849,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
                         ("hfs_cat_traverse: offset of record %d in index node %d too large (%d vs %"
                         PRIu16 ")", rec, cur_node, (int) rec_off,
                         nodesize);
-                    free(node);
                     return 1;
                 }
 
@@ -880,9 +859,8 @@ hfs_cat_traverse(HFS_INFO * hfs,
                 if ((keylen < 6) || (keylen > nodesize - rec_off)) {
                     tsk_error_set_errno(TSK_ERR_FS_GENFS);
                     tsk_error_set_errstr
-                        ("hfs_cat_traverse: length of key %d in index node %d out of bounds (6 < %" PRIu64 " < %"
-                        PRIu64 ")", rec, cur_node, keylen, nodesize - rec_off);
-                    free(node);
+                        ("hfs_cat_traverse: length of key %d in index node %d out of bounds (6 < %" PRIuSIZE " < %"
+                        PRIuSIZE ")", rec, cur_node, keylen, nodesize - rec_off);
                     return 1;
                 }
 
@@ -904,7 +882,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
                     tsk_error_set_errno(TSK_ERR_FS_GENFS);
                     tsk_error_set_errstr2
                         ("hfs_cat_traverse: Callback returned error");
-                    free(node);
                     return 1;
                 }
                 // record the closest entry
@@ -917,16 +894,14 @@ hfs_cat_traverse(HFS_INFO * hfs,
                     if (keylen > nodesize - rec_off) {
                         tsk_error_set_errno(TSK_ERR_FS_GENFS);
                         tsk_error_set_errstr
-                            ("hfs_cat_traverse: offset of record and keylength %d in index node %d too large (%" PRIu64 " vs %"
+                            ("hfs_cat_traverse: offset of record and keylength %d in index node %d too large (%" PRIuSIZE " vs %"
                             PRIu16 ")", rec, cur_node,
                             (int) rec_off + keylen, nodesize);
-                        free(node);
                         return 1;
                     }
                     if (sizeof(hfs_btree_index_record) > nodesize - rec_off - keylen) {
                         tsk_error_set_errno(TSK_ERR_FS_GENFS);
                         tsk_error_set_errstr("hfs_cat_traverse: truncated btree index record");
-                        free(node);
                         return 1;
                     }
                     idx_rec =
@@ -977,7 +952,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
                     tsk_error_set_errstr
                         ("hfs_cat_traverse: offset of record %d in leaf node %d too small (%"
                         PRIu16 ")", rec, cur_node, nodesize);
-                    free(node);
                     return 1;
                 }
                 // get the record offset in the node
@@ -992,7 +966,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
                         ("hfs_cat_traverse: offset of record %d in leaf node %d too large (%d vs %"
                         PRIu16 ")", rec, cur_node, (int) rec_off,
                         nodesize);
-                    free(node);
                     return 1;
                 }
 
@@ -1003,9 +976,8 @@ hfs_cat_traverse(HFS_INFO * hfs,
                 if ((keylen < 6) || (keylen > nodesize - rec_off)) {
                     tsk_error_set_errno(TSK_ERR_FS_GENFS);
                     tsk_error_set_errstr
-                        ("hfs_cat_traverse: length of key %d in leaf node %d out of bounds (6 < %" PRIu64 " < %"
+                        ("hfs_cat_traverse: length of key %d in leaf node %d out of bounds (6 < %" PRIuSIZE " < %"
                         PRIu16 ")", rec, cur_node, keylen, nodesize);
-                    free(node);
                     return 1;
                 }
 
@@ -1032,7 +1004,6 @@ hfs_cat_traverse(HFS_INFO * hfs,
                     tsk_error_set_errno(TSK_ERR_FS_GENFS);
                     tsk_error_set_errstr2
                         ("hfs_cat_traverse: Callback returned error");
-                    free(node);
                     return 1;
                 }
             }
@@ -1053,11 +1024,10 @@ hfs_cat_traverse(HFS_INFO * hfs,
             tsk_error_set_errstr("hfs_cat_traverse: btree node %" PRIu32
                 " (%" PRIu64 ") is neither index nor leaf (%" PRIu8 ")",
                 cur_node, cur_off, node_desc->type);
-            free(node);
             return 1;
         }
     }
-    free(node);
+
     return 0;
 }
 
@@ -2584,16 +2554,18 @@ typedef struct {
  * @param tableOffsetOut the offset of the block table in the resource fork
  * @return 1 on success, 0 on error
  */
-static int
-hfs_read_zlib_block_table(const TSK_FS_ATTR *rAttr, CMP_OFFSET_ENTRY** offsetTableOut, uint32_t* tableSizeOut, uint32_t* tableOffsetOut) {
+std::unique_ptr<CMP_OFFSET_ENTRY[]>
+hfs_read_zlib_block_table(
+  const TSK_FS_ATTR *rAttr,
+  uint32_t* tableSizeOut,
+  uint32_t* tableOffsetOut)
+{
     ssize_t attrReadResult;
     hfs_resource_fork_header rfHeader;
     uint32_t dataOffset;
     uint32_t offsetTableOffset;
     char fourBytes[4];          // Size of the offset table, little endian
     uint32_t tableSize;         // Size of the offset table
-    char *offsetTableData = NULL;
-    CMP_OFFSET_ENTRY *offsetTable = NULL;
     size_t indx;
 
     // Read the resource fork header
@@ -2602,7 +2574,7 @@ hfs_read_zlib_block_table(const TSK_FS_ATTR *rAttr, CMP_OFFSET_ENTRY** offsetTab
     if (attrReadResult != sizeof(hfs_resource_fork_header)) {
         error_returned
             (" %s: trying to read the resource fork header", __func__);
-        return 0;
+        return nullptr;
     }
 
     // Begin to parse the resource fork. For now, we just need the data offset.
@@ -2621,55 +2593,45 @@ hfs_read_zlib_block_table(const TSK_FS_ATTR *rAttr, CMP_OFFSET_ENTRY** offsetTab
         error_returned
             (" %s: trying to read the offset table size, "
             "return value of %u should have been 4", __func__, attrReadResult);
-        return 0;
+        return nullptr;
     }
     tableSize = tsk_getu32(TSK_LIT_ENDIAN, fourBytes);
 
     // Each table entry is 8 bytes long
-    offsetTableData = (char*) tsk_malloc(tableSize * 8);
-    if (offsetTableData == NULL) {
+    std::unique_ptr<char[]> offsetTableData{new(std::nothrow) char[tableSize * 8]};
+    if (!offsetTableData) {
         error_returned
             (" %s: space for the offset table raw data", __func__);
-        return 0;
+        return nullptr;
     }
 
-    offsetTable =
-        (CMP_OFFSET_ENTRY *) tsk_malloc(tableSize *
-        sizeof(CMP_OFFSET_ENTRY));
-    if (offsetTable == NULL) {
+    std::unique_ptr<CMP_OFFSET_ENTRY[]> offsetTable{new(std::nothrow) CMP_OFFSET_ENTRY[tableSize]};
+    if (!offsetTable) {
         error_returned
             (" %s: space for the offset table", __func__);
-        goto on_error;
+        return nullptr;
     }
 
     attrReadResult = tsk_fs_attr_read(rAttr, offsetTableOffset + 4,
-        offsetTableData, tableSize * 8, TSK_FS_FILE_READ_FLAG_NONE);
+        offsetTableData.get(), tableSize * 8, TSK_FS_FILE_READ_FLAG_NONE);
     if (attrReadResult != (ssize_t) tableSize * 8) {
         error_returned
             (" %s: reading in the compression offset table, "
             "return value %u should have been %u", __func__, attrReadResult,
             tableSize * 8);
-        goto on_error;
+        return nullptr;
     }
 
     for (indx = 0; indx < tableSize; ++indx) {
         offsetTable[indx].offset =
-            tsk_getu32(TSK_LIT_ENDIAN, offsetTableData + indx * 8);
+            tsk_getu32(TSK_LIT_ENDIAN, offsetTableData.get() + indx * 8);
         offsetTable[indx].length =
-            tsk_getu32(TSK_LIT_ENDIAN, offsetTableData + indx * 8 + 4);
+            tsk_getu32(TSK_LIT_ENDIAN, offsetTableData.get() + indx * 8 + 4);
     }
 
-    free(offsetTableData);
-
-    *offsetTableOut = offsetTable;
     *tableSizeOut = tableSize;
     *tableOffsetOut = offsetTableOffset;
-    return 1;
-
-on_error:
-    free(offsetTable);
-    free(offsetTableData);
-    return 0;
+    return offsetTable;
 }
 
 
@@ -2683,8 +2645,12 @@ on_error:
  * @param tableOffsetOut the offset of the block table in the resource fork
  * @return 1 on success, 0 on error
  */
-static int
-hfs_read_lzvn_block_table(const TSK_FS_ATTR *rAttr, CMP_OFFSET_ENTRY** offsetTableOut, uint32_t* tableSizeOut, uint32_t* tableOffsetOut) {
+std::unique_ptr<CMP_OFFSET_ENTRY[]>
+hfs_read_lzvn_block_table(
+  const TSK_FS_ATTR *rAttr,
+  uint32_t* tableSizeOut,
+  uint32_t* tableOffsetOut)
+{
     ssize_t attrReadResult;
     char fourBytes[4];
     uint32_t tableDataSize;
@@ -2699,26 +2665,26 @@ hfs_read_lzvn_block_table(const TSK_FS_ATTR *rAttr, CMP_OFFSET_ENTRY** offsetTab
         error_returned
             (" %s: trying to read the offset table size, "
             "return value of %u should have been 4", __func__, attrReadResult);
-        return 0;
+        return nullptr;
     }
 
     tableDataSize = tsk_getu32(TSK_LIT_ENDIAN, fourBytes);
 
-    std::unique_ptr<char[]> offsetTableData(new char[tableDataSize]);
+    std::unique_ptr<char[]> offsetTableData(new(std::nothrow) char[tableDataSize]);
     if (!offsetTableData) {
         error_returned
             (" %s: space for the offset table raw data", __func__);
-        return 0;
+        return nullptr;
     }
 
     // table entries are 4 bytes, last entry is end of data
     tableSize = tableDataSize / 4 - 1;
 
-    std::unique_ptr<CMP_OFFSET_ENTRY[]> offsetTable(new CMP_OFFSET_ENTRY[tableSize]);
+    std::unique_ptr<CMP_OFFSET_ENTRY[]> offsetTable(new(std::nothrow) CMP_OFFSET_ENTRY[tableSize]);
     if (!offsetTable) {
         error_returned
             (" %s: space for the offset table", __func__);
-        return 0;
+        return nullptr;
     }
 
     attrReadResult = tsk_fs_attr_read(rAttr, 0,
@@ -2728,7 +2694,7 @@ hfs_read_lzvn_block_table(const TSK_FS_ATTR *rAttr, CMP_OFFSET_ENTRY** offsetTab
             (" %s: reading in the compression offset table, "
             "return value %u should have been %u", __func__, attrReadResult,
             tableDataSize);
-        return 0;
+        return nullptr;
     }
 
     uint32_t a = tableDataSize;
@@ -2742,10 +2708,9 @@ hfs_read_lzvn_block_table(const TSK_FS_ATTR *rAttr, CMP_OFFSET_ENTRY** offsetTab
         a = b;
     }
 
-    *offsetTableOut = offsetTable.release();
     *tableSizeOut = tableSize;
     *tableOffsetOut = 0;
-    return 1;
+    return offsetTable;
 }
 
 /**
@@ -2959,9 +2924,8 @@ hfs_attr_walk_compressed_rsrc(
     [[maybe_unused]] int flags,
     TSK_FS_FILE_WALK_CB a_action,
     void *ptr,
-    int (*read_block_table)(
+    std::unique_ptr<CMP_OFFSET_ENTRY[]> (*read_block_table)(
       const TSK_FS_ATTR *rAttr,
-      CMP_OFFSET_ENTRY** offsetTableOut,
       uint32_t* tableSizeOut,
       uint32_t* tableOffsetOut
     ),
@@ -2976,11 +2940,8 @@ hfs_attr_walk_compressed_rsrc(
     TSK_FS_INFO *fs;
     TSK_FS_FILE *fs_file;
     const TSK_FS_ATTR *rAttr;   // resource fork attribute
-    char *rawBuf = NULL;               // compressed data
-    char *uncBuf = NULL;               // uncompressed data
     uint32_t offsetTableOffset;
     uint32_t offsetTableSize;         // The number of table entries
-    CMP_OFFSET_ENTRY *offsetTable = NULL;
     size_t indx;                // index for looping over the offset table
     TSK_OFF_T off = 0;          // the offset in the uncompressed data stream consumed thus far
 
@@ -3033,7 +2994,10 @@ hfs_attr_walk_compressed_rsrc(
     }
 
     // read the offset table from the fork header
-    if (!read_block_table(rAttr, &offsetTable, &offsetTableSize, &offsetTableOffset)) {
+    std::unique_ptr<CMP_OFFSET_ENTRY[]> offsetTable = read_block_table(
+      rAttr, &offsetTableSize, &offsetTableOffset
+    );
+    if (!offsetTable) {
       return 1;
     }
 
@@ -3041,18 +3005,18 @@ hfs_attr_walk_compressed_rsrc(
     /* Raw data can be COMPRESSION_UNIT_SIZE+1 if the data is not
      * compressed and there is a 1-byte flag that indicates that
      * the data is not compressed. */
-    rawBuf = (char *) tsk_malloc(COMPRESSION_UNIT_SIZE + 1);
-    if (rawBuf == NULL) {
+    std::unique_ptr<char[]> rawBuf{new(std::nothrow) char[COMPRESSION_UNIT_SIZE + 1]};
+    if (!rawBuf) {
         error_returned
             (" %s: buffers for reading and uncompressing", __func__);
-        goto on_error;
+        return 1;
     }
 
-    uncBuf = (char *) tsk_malloc(COMPRESSION_UNIT_SIZE);
-    if (uncBuf == NULL) {
+    std::unique_ptr<char[]> uncBuf{new(std::nothrow) char[COMPRESSION_UNIT_SIZE]};
+    if (!uncBuf) {
         error_returned
             (" %s: buffers for reading and uncompressing", __func__);
-        goto on_error;
+        return 1;
     }
 
     // FOR entry in the table DO
@@ -3064,12 +3028,12 @@ hfs_attr_walk_compressed_rsrc(
         char *lumpStart;
 
         switch ((uncLen = read_and_decompress_block(
-                    rAttr, rawBuf, uncBuf,
-                    offsetTable, offsetTableSize, offsetTableOffset, indx,
+                    rAttr, rawBuf.get(), uncBuf.get(),
+                    offsetTable.get(), offsetTableSize, offsetTableOffset, indx,
                     decompress_block)))
         {
         case -1:
-            goto on_error;
+            return 1;
         case  0:
             continue;
         default:
@@ -3080,7 +3044,7 @@ hfs_attr_walk_compressed_rsrc(
         // that are at most the block size.
         blockSize = fs->block_size;
         remaining = uncLen;
-        lumpStart = uncBuf;
+        lumpStart = uncBuf.get();
 
         while (remaining > 0) {
             int retval;         // action return value
@@ -3095,7 +3059,7 @@ hfs_attr_walk_compressed_rsrc(
             if (lumpSize > SIZE_MAX) {
                 error_detected(TSK_ERR_FS_FWALK,
                     " %s: lumpSize is too large for the action", __func__);
-                goto on_error;
+                return 1;
             }
 
             retval = a_action(fs_attr->fs_file, off, 0, lumpStart,
@@ -3105,7 +3069,7 @@ hfs_attr_walk_compressed_rsrc(
             if (retval == TSK_WALK_ERROR) {
                 error_detected(TSK_ERR_FS | 201,
                     "%s: callback returned an error", __func__);
-                goto on_error;
+                return 1;
             }
             else if (retval == TSK_WALK_STOP) {
                 break;
@@ -3118,17 +3082,7 @@ hfs_attr_walk_compressed_rsrc(
         }
     }
 
-    // Done, so free up the allocated resources.
-    free(offsetTable);
-    free(rawBuf);
-    free(uncBuf);
     return 0;
-
-on_error:
-    free(offsetTable);
-    free(rawBuf);
-    free(uncBuf);
-    return 1;
 }
 
 
@@ -3194,22 +3148,21 @@ hfs_attr_walk_lzvn_rsrc(const TSK_FS_ATTR * fs_attr,
 static ssize_t
 hfs_file_read_compressed_rsrc(const TSK_FS_ATTR * a_fs_attr,
     TSK_OFF_T a_offset, char *a_buf, size_t a_len,
-    int (*read_block_table)(const TSK_FS_ATTR *rAttr,
-                            CMP_OFFSET_ENTRY** offsetTableOut,
-                            uint32_t* tableSizeOut,
-                            uint32_t* tableOffsetOut),
-    int (*decompress_block)(char* rawBuf,
-                            uint32_t len,
-                            char* uncBuf,
-                            uint64_t* uncLen))
+    std::unique_ptr<CMP_OFFSET_ENTRY[]> (*read_block_table)(
+      const TSK_FS_ATTR *rAttr,
+      uint32_t* tableSizeOut,
+      uint32_t* tableOffsetOut),
+    int (*decompress_block)(
+      char* rawBuf,
+      uint32_t len,
+      char* uncBuf,
+      uint64_t* uncLen)
+)
 {
     TSK_FS_FILE *fs_file;
     const TSK_FS_ATTR *rAttr;
-    char *rawBuf = NULL;
-    char *uncBuf = NULL;
     uint32_t offsetTableOffset;
     uint32_t offsetTableSize;         // Size of the offset table
-    CMP_OFFSET_ENTRY *offsetTable = NULL;
     TSK_OFF_T indx;                // index for looping over the offset table
     TSK_OFF_T startUnit = 0;
     uint32_t startUnitOffset = 0;
@@ -3280,7 +3233,10 @@ hfs_file_read_compressed_rsrc(const TSK_FS_ATTR * a_fs_attr,
     }
 
     // read the offset table from the fork header
-    if (!read_block_table(rAttr, &offsetTable, &offsetTableSize, &offsetTableOffset)) {
+    std::unique_ptr<CMP_OFFSET_ENTRY[]> offsetTable =  read_block_table(
+      rAttr, &offsetTableSize, &offsetTableOffset
+    );
+    if (!offsetTable) {
       return -1;
     }
 
@@ -3296,7 +3252,7 @@ hfs_file_read_compressed_rsrc(const TSK_FS_ATTR * a_fs_attr,
             __func__, a_offset, a_offset + a_len,
             offsetTable[offsetTableSize-1].offset +
             offsetTable[offsetTableSize-1].length);
-        goto on_error;
+        return -1;
     }
 
     if (tsk_verbose)
@@ -3309,34 +3265,34 @@ hfs_file_read_compressed_rsrc(const TSK_FS_ATTR * a_fs_attr,
     /* Raw data can be COMPRESSION_UNIT_SIZE+1 if the zlib data is not
      * compressed and there is a 1-byte flag that indicates that
      * the data is not compressed. */
-    rawBuf = (char *) tsk_malloc(COMPRESSION_UNIT_SIZE + 1);
-    if (rawBuf == NULL) {
+    std::unique_ptr<char[]> rawBuf{new(std::nothrow) char[COMPRESSION_UNIT_SIZE + 1]};
+    if (!rawBuf) {
         error_returned
             (" %s: buffers for reading and uncompressing", __func__);
-        goto on_error;
+        return -1;
     }
 
-    uncBuf = (char *) tsk_malloc(COMPRESSION_UNIT_SIZE);
-    if (uncBuf == NULL) {
+    std::unique_ptr<char[]> uncBuf{new(std::nothrow) char[COMPRESSION_UNIT_SIZE]};
+    if (!uncBuf) {
         error_returned
             (" %s: buffers for reading and uncompressing", __func__);
-        goto on_error;
+        return -1;
     }
 
     // Read from the indicated comp units
     for (indx = startUnit; indx <= endUnit; ++indx) {
-        char *uncBufPtr = uncBuf;
+        char *uncBufPtr = uncBuf.get();
         size_t bytesToCopy;
 
         const ssize_t ret = read_and_decompress_block(
-            rAttr, rawBuf, uncBuf,
-            offsetTable, offsetTableSize, offsetTableOffset, (size_t)indx,
+            rAttr, rawBuf.get(), uncBuf.get(),
+            offsetTable.get(), offsetTableSize, offsetTableOffset, (size_t)indx,
             decompress_block
         );
 
         switch (ret) {
         case -1:
-            goto on_error;
+            return -1;
         case  0:
             continue;
         default:
@@ -3377,17 +3333,7 @@ hfs_file_read_compressed_rsrc(const TSK_FS_ATTR * a_fs_attr,
         memset(a_buf + bytesCopied, 0, a_len - (size_t) bytesCopied);   // cast OK because diff must be < compression unit size
     }
 
-    free(offsetTable);
-    free(rawBuf);
-    free(uncBuf);
-
     return (ssize_t) bytesCopied;       // cast OK, cannot be greater than a_len which cannot be greater than SIZE_MAX/2 (rounded down).
-
-on_error:
-    free(offsetTable);
-    free(rawBuf);
-    free(uncBuf);
-    return -1;
 }
 
 
@@ -5293,7 +5239,6 @@ hfs_inode_walk(TSK_FS_INFO * fs, TSK_INUM_T start_inum,
     TSK_FS_META_WALK_CB action, void *ptr)
 {
     TSK_INUM_T inum;
-    TSK_FS_FILE *fs_file;
 
     if (tsk_verbose)
         tsk_fprintf(stderr,
@@ -5342,11 +5287,18 @@ hfs_inode_walk(TSK_FS_INFO * fs, TSK_INUM_T start_inum,
         }
     }
 
-    if ((fs_file = tsk_fs_file_alloc(fs)) == NULL)
-        return 1;
+    std::unique_ptr<TSK_FS_FILE, decltype(&tsk_fs_file_close)> fs_file{
+        tsk_fs_file_alloc(fs),
+        tsk_fs_file_close
+    };
 
-    if ((fs_file->meta = tsk_fs_meta_alloc(HFS_FILE_CONTENT_LEN)) == NULL)
+    if (!fs_file) {
         return 1;
+    }
+
+    if ((fs_file->meta = tsk_fs_meta_alloc(HFS_FILE_CONTENT_LEN)) == NULL) {
+        return 1;
+    }
 
     if (start_inum > end_inum)
         XSWAP(start_inum, end_inum);
@@ -5354,7 +5306,7 @@ hfs_inode_walk(TSK_FS_INFO * fs, TSK_INUM_T start_inum,
     for (inum = start_inum; inum <= end_inum; ++inum) {
         int retval;
 
-        if (hfs_inode_lookup(fs, fs_file, inum)) {
+        if (hfs_inode_lookup(fs, fs_file.get(), inum)) {
             // deleted files may not exist in the catalog
             if (tsk_error_get_errno() == TSK_ERR_FS_INODE_NUM) {
                 tsk_error_reset();
@@ -5369,18 +5321,15 @@ hfs_inode_walk(TSK_FS_INFO * fs, TSK_INUM_T start_inum,
             continue;
 
         /* call action */
-        retval = action(fs_file, ptr);
+        retval = action(fs_file.get(), ptr);
         if (retval == TSK_WALK_STOP) {
-            tsk_fs_file_close(fs_file);
             return 0;
         }
         else if (retval == TSK_WALK_ERROR) {
-            tsk_fs_file_close(fs_file);
             return 1;
         }
     }
 
-    tsk_fs_file_close(fs_file);
     return 0;
 }
 
@@ -5863,7 +5812,6 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
     TSK_DADDR_T numblock, int32_t sec_skew)
 {
     HFS_INFO *hfs = (HFS_INFO *) fs;
-    TSK_FS_FILE *fs_file;
     char hfs_mode[12];
     HFS_PRINT_ADDR print;
     HFS_ENTRY entry;
@@ -5879,7 +5827,12 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
             "hfs_istat: inum: %" PRIuINUM " numblock: %" PRIu32 "\n",
             inum, numblock);
 
-    if ((fs_file = tsk_fs_file_open_meta(fs, NULL, inum)) == NULL) {
+    std::unique_ptr<TSK_FS_FILE, decltype(&tsk_fs_file_close)> fs_file{
+        tsk_fs_file_open_meta(fs, NULL, inum),
+        tsk_fs_file_close
+    };
+
+    if (!fs_file) {
         error_returned("hfs_istat: getting metadata for the file");
         return 1;
     }
@@ -6135,7 +6088,7 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
                 print.startBlock = 0;
                 print.blockCount = 0;
 
-                if (tsk_fs_file_walk_type(fs_file,
+                if (tsk_fs_file_walk_type(fs_file.get(),
                     TSK_FS_ATTR_TYPE_HFS_DATA, HFS_FS_ATTR_ID_DATA,
                     (TSK_FS_FILE_WALK_FLAG_ENUM) (TSK_FS_FILE_WALK_FLAG_AONLY |
                         TSK_FS_FILE_WALK_FLAG_SLACK), print_addr_act,
@@ -6164,7 +6117,7 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
                 print.startBlock = 0;
                 print.blockCount = 0;
 
-                if (tsk_fs_file_walk_type(fs_file,
+                if (tsk_fs_file_walk_type(fs_file.get(),
                     TSK_FS_ATTR_TYPE_HFS_RSRC, HFS_FS_ATTR_ID_RSRC,
                     (TSK_FS_FILE_WALK_FLAG_ENUM) (TSK_FS_FILE_WALK_FLAG_AONLY |
                         TSK_FS_FILE_WALK_FLAG_SLACK), print_addr_act,
@@ -6183,7 +6136,7 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
     }
 
     // Force the loading of all attributes.
-    (void) tsk_fs_file_attr_get(fs_file);
+    (void) tsk_fs_file_attr_get(fs_file.get());
 
     /* Print all of the attributes */
     tsk_fprintf(hFile, "\nAttributes: \n");
@@ -6191,11 +6144,11 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
         int cnt, i;
 
         // cycle through the attributes
-        cnt = tsk_fs_file_attr_getsize(fs_file);
+        cnt = tsk_fs_file_attr_getsize(fs_file.get());
         for (i = 0; i < cnt; ++i) {
             const char *type;   // type of the attribute as a string
             const TSK_FS_ATTR *fs_attr =
-                tsk_fs_file_attr_get_idx(fs_file, i);
+                tsk_fs_file_attr_get_idx(fs_file.get(), i);
             if (!fs_attr)
                 continue;
 
@@ -6365,7 +6318,7 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
     }
 
     // This will return NULL if there is an error, or if there are no resources
-    rd = hfs_parse_resource_fork(fs_file);
+    rd = hfs_parse_resource_fork(fs_file.get());
     // TODO: Should check the errnum here to see if there was an error
 
     if (rd != NULL) {
@@ -6380,11 +6333,8 @@ hfs_istat(TSK_FS_INFO * fs, TSK_FS_ISTAT_FLAG_ENUM istat_flags, FILE * hFile, TS
     // This is OK to call with NULL
     free_res_descriptor(rd);
 
-    tsk_fs_file_close(fs_file);
     return 0;
 }
-
-
 
 static TSK_FS_ATTR_TYPE_ENUM
 hfs_get_default_attr_type(const TSK_FS_FILE * a_file)
@@ -6468,7 +6418,6 @@ hfs_open(
     unsigned int len;
     TSK_FS_INFO *fs;
     ssize_t cnt;
-    TSK_FS_FILE *file;          // The root directory, or the metadata directories
     TSK_INUM_T inum;            // The inum (or CNID) of the metadata directories
     int8_t result;              // of tsk_fs_path2inum()
 
@@ -6765,16 +6714,20 @@ hfs_open(
     /* Creation Times */
 
     // First, the root
-    file = tsk_fs_file_open_meta(fs, NULL, 2);
-    if (file != NULL) {
-        hfs->root_crtime = file->meta->crtime;
-        hfs->has_root_crtime = TRUE;
-        tsk_fs_file_close(file);
+    {
+        std::unique_ptr<TSK_FS_FILE, decltype(&tsk_fs_file_close)> file{
+            tsk_fs_file_open_meta(fs, NULL, 2),
+            tsk_fs_file_close
+        };
+
+        if (file) {
+            hfs->root_crtime = file->meta->crtime;
+            hfs->has_root_crtime = TRUE;
+        }
+        else {
+            hfs->has_root_crtime = FALSE;
+        }
     }
-    else {
-        hfs->has_root_crtime = FALSE;
-    }
-    file = NULL;
 
     // disable hard link traversal while finding the hard
     // link directories themselves (to prevent problems if
@@ -6796,12 +6749,15 @@ hfs_open(
         "/" UTF8_NULL_REPLACE UTF8_NULL_REPLACE UTF8_NULL_REPLACE
         UTF8_NULL_REPLACE "HFS+ Private Data", &inum, NULL);
     if (result == 0) {
-        TSK_FS_FILE *file_tmp = tsk_fs_file_open_meta(fs, NULL, inum);
-        if (file_tmp != NULL) {
+        std::unique_ptr<TSK_FS_FILE, decltype(&tsk_fs_file_close)> file_tmp{
+            tsk_fs_file_open_meta(fs, NULL, inum),
+            tsk_fs_file_close
+        };
+
+        if (file_tmp) {
             hfs->meta_crtime = file_tmp->meta->crtime;
             hfs->has_meta_crtime = TRUE;
             hfs->meta_inum = inum;
-            tsk_fs_file_close(file_tmp);
         }
     }
 
@@ -6815,12 +6771,15 @@ hfs_open(
         tsk_fs_path2inum(fs, "/.HFS+ Private Directory Data\r", &inum,
         NULL);
     if (result == 0) {
-        TSK_FS_FILE *file_tmp = tsk_fs_file_open_meta(fs, NULL, inum);
-        if (file_tmp != NULL) {
+        std::unique_ptr<TSK_FS_FILE, decltype(&tsk_fs_file_close)> file_tmp{
+            tsk_fs_file_open_meta(fs, NULL, inum),
+            tsk_fs_file_close
+        };
+
+        if (file_tmp) {
             hfs->metadir_crtime = file_tmp->meta->crtime;
             hfs->has_meta_dir_crtime = TRUE;
             hfs->meta_dir_inum = inum;
-            tsk_fs_file_close(file_tmp);
         }
     }
 

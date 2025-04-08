@@ -17,6 +17,25 @@
 #if HAVE_LIBQCOW
 #include "qcow.h"
 
+#include "tsk/base/tsk_os_cpp.h"
+
+#include <algorithm>
+#include <memory>
+#include <string>
+
+// select wide string functions for Windodws, narrow otherwise
+#ifdef TSK_WIN32
+
+#define LIBQCOW_CHECK_FILE_SIGNATURE libqcow_check_file_signature_wide
+#define LIBQCOW_FILE_OPEN libqcow_file_open_wide
+
+#else
+
+#define LIBQCOW_CHECK_FILE_SIGNATURE libqcow_check_file_signature
+#define LIBQCOW_FILE_OPEN libqcow_file_open
+
+#endif
+
 #define TSK_QCOW_ERROR_STRING_SIZE 512
 
 /**
@@ -136,35 +155,52 @@ qcow_open(int a_num_img,
 {
     if (a_num_img != 1) {
         tsk_error_set_errstr("qcow_open file: %" PRIttocTSK
-            ": expected one image filename, was given %d", a_images[0], a_num_img);
+            ": expected 1 image filename, was given %d", a_images[0], a_num_img);
 
         if (tsk_verbose != 0) {
             tsk_fprintf(stderr, "qcow requires exactly 1 image filename for opening\n");
         }
-        return NULL;
+        return nullptr;
     }
 
     char error_string[TSK_QCOW_ERROR_STRING_SIZE];
-    libqcow_error_t *qcow_error = NULL;
-
-    IMG_QCOW_INFO *qcow_info = NULL;
-    TSK_IMG_INFO *img_info = NULL;
+    libqcow_error_t *qcow_error = nullptr;
 
     if (tsk_verbose) {
         libqcow_notify_set_verbose(1);
-        libqcow_notify_set_stream(stderr, NULL);
+        libqcow_notify_set_stream(stderr, nullptr);
     }
 
-    if ((qcow_info =
-            (IMG_QCOW_INFO *) tsk_img_malloc(sizeof(IMG_QCOW_INFO))) ==
-        NULL) {
-        return NULL;
+    const auto deleter = [](IMG_QCOW_INFO* qcow_info) {
+        if (qcow_info->handle) {
+            libqcow_file_close(qcow_info->handle, nullptr);
+        }
+        libqcow_file_free(&(qcow_info->handle), nullptr);
+        tsk_img_free(qcow_info);
+    };
+
+    std::unique_ptr<IMG_QCOW_INFO, decltype(deleter)> qcow_info{
+        (IMG_QCOW_INFO *) tsk_img_malloc(sizeof(IMG_QCOW_INFO)),
+        deleter
+    };
+    if (!qcow_info) {
+        return nullptr;
     }
-    qcow_info->handle = NULL;
-    img_info = (TSK_IMG_INFO *) qcow_info;
+
+    qcow_info->handle = nullptr;
+    TSK_IMG_INFO* img_info = (TSK_IMG_INFO *) qcow_info.get();
+
+#ifdef TSK_WIN32
+    TSK_TSTRING img_path(a_images[0]);
+    std::replace(img_path.begin(), img_path.end(), '/', '\\');
+
+    const TSK_TCHAR* const image = img_path.c_str();
+#else
+    const TSK_TCHAR* const image = a_images[0];
+#endif
 
     if (!tsk_img_copy_image_names(img_info, a_images, a_num_img)) {
-        goto on_error;
+        return nullptr;
     }
 
     if (libqcow_file_initialize(&(qcow_info->handle), &qcow_error) != 1) {
@@ -178,15 +214,11 @@ qcow_open(int a_num_img,
         if (tsk_verbose != 0) {
             tsk_fprintf(stderr, "Unable to create qcow handle\n");
         }
-        goto on_error;
+        return nullptr;
     }
+
     // Check the file signature before we call the library open
-#if defined( TSK_WIN32 )
-    if (libqcow_check_file_signature_wide((const wchar_t *) qcow_info->img_info.images[0], &qcow_error) != 1)
-#else
-    if (libqcow_check_file_signature((const char *) qcow_info->img_info.images[0], &qcow_error) != 1)
-#endif
-	{
+    if (LIBQCOW_CHECK_FILE_SIGNATURE(image, &qcow_error) != 1) {
         tsk_error_reset();
         tsk_error_set_errno(TSK_ERR_IMG_OPEN);
 
@@ -198,18 +230,10 @@ qcow_open(int a_num_img,
         if (tsk_verbose != 0) {
             tsk_fprintf(stderr, "Error checking file signature for qcow file\n");
         }
-        goto on_error;
+        return nullptr;
     }
-#if defined( TSK_WIN32 )
-    if (libqcow_file_open_wide(qcow_info->handle,
-            (const wchar_t *) qcow_info->img_info.images[0],
-            LIBQCOW_OPEN_READ, &qcow_error) != 1)
-#else
-    if (libqcow_file_open(qcow_info->handle,
-            (const char *) qcow_info->img_info.images[0],
-            LIBQCOW_OPEN_READ, &qcow_error) != 1)
-#endif
-    {
+
+    if (LIBQCOW_FILE_OPEN(qcow_info->handle, image, LIBQCOW_OPEN_READ, &qcow_error) != 1) {
         tsk_error_reset();
         tsk_error_set_errno(TSK_ERR_IMG_OPEN);
 
@@ -220,8 +244,9 @@ qcow_open(int a_num_img,
         if (tsk_verbose != 0) {
             tsk_fprintf(stderr, "Error opening qcow file\n");
         }
-        goto on_error;
+        return nullptr;
     }
+
     if (libqcow_file_get_media_size(qcow_info->handle,
             (size64_t *) & (img_info->size), &qcow_error) != 1) {
         tsk_error_reset();
@@ -235,7 +260,7 @@ qcow_open(int a_num_img,
         if (tsk_verbose != 0) {
             tsk_fprintf(stderr, "Error getting size of qcow file\n");
         }
-        goto on_error;
+        return nullptr;
     }
 
     if (a_ssize != 0) {
@@ -244,23 +269,17 @@ qcow_open(int a_num_img,
     else {
         img_info->sector_size = 512;
     }
+
     img_info->itype = TSK_IMG_TYPE_QCOW_QCOW;
-    img_info->read = &qcow_image_read;
-    img_info->close = &qcow_image_close;
-    img_info->imgstat = &qcow_image_imgstat;
+
+    qcow_info->img_info.read = &qcow_image_read;
+    qcow_info->img_info.close = &qcow_image_close;
+    qcow_info->img_info.imgstat = &qcow_image_imgstat;
 
     // initialize the read lock
     tsk_init_lock(&(qcow_info->read_lock));
 
-    return img_info;
-
-on_error:
-    if (qcow_info->handle) {
-        libqcow_file_close(qcow_info->handle, NULL);
-    }
-    libqcow_file_free(&(qcow_info->handle), NULL);
-    tsk_img_free(qcow_info);
-    return NULL;
+    return (TSK_IMG_INFO*) qcow_info.release();
 }
 
 #endif /* HAVE_LIBQCOW */

@@ -10,9 +10,15 @@ EXIT_IGNORE=77
 
 NOHARDFAIL=yes
 
-IMAGE_DIR=test/from_brian
+if [ ! -d ${SLEUTHKIT_TEST_DATA_DIR:=../sleuthkit_test_data} ]; then echo $SLEUTHKIT_TEST_DATA_DIR does not exist ; exit 1 ; fi
+
+IMAGE_DIR=$SLEUTHKIT_TEST_DATA_DIR
 NTHREADS=1
 NITERS=1
+
+if [ -n "$WINE" ]; then
+  EXEEXT=.exe
+fi
 
 check_diffs()
 {
@@ -29,11 +35,7 @@ if ! test -d ${IMAGE_DIR} ; then
     exit ${EXIT_IGNORE}
 fi
 
-FS_THREAD_TEST="tests/fs_thread_test"
-
-if ! test -x ${FS_THREAD_TEST} ; then
-    FS_THREAD_TEST="tests/fs_thread_test.exe"
-fi
+FS_THREAD_TEST="test/legacy/fs_thread_test$EXEEXT"
 
 if ! test -x ${FS_THREAD_TEST} ; then
     echo "Missing test executable: ${FS_THREAD_TEST}"
@@ -43,9 +45,9 @@ fi
 if test -f ${IMAGE_DIR}/ext2fs.dd ; then
     echo testing ${IMAGE_DIR}/ext2fs.dd
     rm -f base.log thread-*.log
-    ${FS_THREAD_TEST} -f ext2 ${IMAGE_DIR}/ext2fs.dd 1 1
+    ${WINE} ${FS_THREAD_TEST} -f ext2 ${IMAGE_DIR}/ext2fs.dd 1 1
     mv thread-0.log base.log
-    ${FS_THREAD_TEST} -f ext2 ${IMAGE_DIR}/ext2fs.dd ${NTHREADS} ${NITERS}
+    ${WINE} ${FS_THREAD_TEST} -f ext2 ${IMAGE_DIR}/ext2fs.dd ${NTHREADS} ${NITERS}
 
     if ! check_diffs ; then
         exit ${EXIT_FAILURE}
@@ -58,9 +60,9 @@ fi
 if test -f ${IMAGE_DIR}/ext2fs.dd ; then
     echo testing ${IMAGE_DIR}/ext2fs.dd
     rm -f base.log thread-*.log
-    ${FS_THREAD_TEST} -f ufs ${IMAGE_DIR}/misc-ufs1.dd 1 1
+    ${WINE} ${FS_THREAD_TEST} -f ufs ${IMAGE_DIR}/misc-ufs1.dd 1 1
     mv thread-0.log base.log
-    ${FS_THREAD_TEST} -f ufs ${IMAGE_DIR}/misc-ufs1.dd ${NTHREADS} ${NITERS}
+    ${WINE} ${FS_THREAD_TEST} -f ufs ${IMAGE_DIR}/misc-ufs1.dd ${NTHREADS} ${NITERS}
 
     if ! check_diffs ; then
         exit ${EXIT_FAILURE}
@@ -74,9 +76,9 @@ fi
 if test -f ${IMAGE_DIR}/test_hfs.dmg ; then
     echo testing ${IMAGE_DIR}/test_hfs.dmg
     rm -f base.log thread-*.log
-    ${FS_THREAD_TEST} -f hfs -o 64 ${IMAGE_DIR}/test_hfs.dmg 1 1
+    ${WINE} ${FS_THREAD_TEST} -f hfs -o 64 ${IMAGE_DIR}/test_hfs.dmg 1 1
     mv thread-0.log base.log
-    ${FS_THREAD_TEST} -f hfs -o 64 ${IMAGE_DIR}/test_hfs.dmg ${NTHREADS} ${NITERS}
+    ${WINE} ${FS_THREAD_TEST} -f hfs -o 64 ${IMAGE_DIR}/test_hfs.dmg ${NTHREADS} ${NITERS}
 
     if ! check_diffs ; then
         exit ${EXIT_FAILURE}
@@ -89,9 +91,9 @@ fi
 if test -f ${IMAGE_DIR}/ntfs-img-kw-1.dd ; then
     echo testing ${IMAGE_DIR}/ntfs-img-kw-1.dd
     rm -f base.log thread-*.log
-    ${FS_THREAD_TEST} -f ntfs ${IMAGE_DIR}/ntfs-img-kw-1.dd 1 1
+    ${WINE} ${FS_THREAD_TEST} -f ntfs ${IMAGE_DIR}/ntfs-img-kw-1.dd 1 1
     mv thread-0.log base.log
-    ${FS_THREAD_TEST} -f ntfs ${IMAGE_DIR}/ntfs-img-kw-1.dd ${NTHREADS} ${NITERS}
+    ${WINE} ${FS_THREAD_TEST} -f ntfs ${IMAGE_DIR}/ntfs-img-kw-1.dd ${NTHREADS} ${NITERS}
 
     if ! check_diffs ; then
         exit ${EXIT_FAILURE}
@@ -105,9 +107,9 @@ fi
 if test -f ${IMAGE_DIR}/fat32.dd ; then
     echo testing ${IMAGE_DIR}/fat32.dd
     rm -f base.log thread-*.log
-    ${FS_THREAD_TEST} -f fat ${IMAGE_DIR}/fat32.dd 1 1
+    ${WINE} ${FS_THREAD_TEST} -f fat ${IMAGE_DIR}/fat32.dd 1 1
     mv thread-0.log base.log
-    ${FS_THREAD_TEST} -f fat ${IMAGE_DIR}/fat32.dd ${NTHREADS} ${NITERS}
+    ${WINE} ${FS_THREAD_TEST} -f fat ${IMAGE_DIR}/fat32.dd ${NTHREADS} ${NITERS}
 
     if ! check_diffs; then
         exit ${EXIT_FAILURE}

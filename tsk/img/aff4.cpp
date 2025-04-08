@@ -20,6 +20,7 @@
 #include <string.h>
 
 #include <memory>
+#include <new>
 
 std::string get_messages(const AFF4_Message* msg) {
     if (!msg) {
@@ -178,7 +179,7 @@ aff4_open(
 #if defined (TSK_WIN32)
     const size_t len = TSTRLEN(a_images[0]) + 1;
 
-    std::unique_ptr<char[]> fn{new char[len]};
+    std::unique_ptr<char[]> fn{new(std::nothrow) char[len]};
     if (!fn) {
         return nullptr;
     }
@@ -265,14 +266,15 @@ aff4_open(
 
     img_info->sector_size = 512;
     img_info->itype = TSK_IMG_TYPE_AFF4_AFF4;
-    img_info->read = &aff4_image_read;
-    img_info->close = &aff4_image_close;
-    img_info->imgstat = &aff4_image_imgstat;
+
+    aff4_info->img_info.read = &aff4_image_read;
+    aff4_info->img_info.close = &aff4_image_close;
+    aff4_info->img_info.imgstat = &aff4_image_imgstat;
 
     // initialize the API lock
     tsk_init_lock(&(aff4_info->read_lock));
 
-    return img_info;
+    return (TSK_IMG_INFO*) aff4_info.release();
 }
 
 #endif /* HAVE_LIBAFF4 */

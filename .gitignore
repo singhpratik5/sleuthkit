@@ -205,3 +205,6 @@ sleuthkit-*.tar.gz
 test-suite.log
 venv
 wget-log
+TAGS
+test/from_brian/
+*.log

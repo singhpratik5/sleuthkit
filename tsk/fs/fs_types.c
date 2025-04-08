@@ -65,6 +65,9 @@ static FS_TYPES fs_type_table[] = {
     {"hfsp", TSK_FS_TYPE_HFS, "HFS+"},
     {"hfsl", TSK_FS_TYPE_HFS_LEGACY, "HFS (Legacy)"},
 #endif
+    {"yaffs2", TSK_FS_TYPE_YAFFS2, "YAFFS2"},
+    {"xfs", TSK_FS_TYPE_XFS, "XFS (experimental)"},
+    {"btrfs", TSK_FS_TYPE_BTRFS, "Btrfs (experimental)"},
     {0,0,""},
 };
 

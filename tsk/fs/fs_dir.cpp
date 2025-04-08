@@ -17,6 +17,8 @@
 #include "tsk_fs_i.h"
 #include "tsk_fatfs.h"
 
+#include <memory>
+
 /** \internal
 * Allocate a FS_DIR structure to load names into.
 *
@@ -257,7 +259,7 @@ tsk_fs_dir_add(TSK_FS_DIR * a_fs_dir, const TSK_FS_NAME * a_fs_name)
 			if (a_fs_dir->names_used >= MAX_DIR_SIZE_TO_PROCESS) {
 				tsk_error_reset();
 				tsk_error_set_errno(TSK_ERR_FS_GENFS);
-				tsk_error_set_errstr("tsk_fs_dir_add: Directory too large to process (addr: %" PRIuSIZE")", a_fs_dir->addr);
+				tsk_error_set_errstr("tsk_fs_dir_add: Directory too large to process (addr: %" PRIuINUM ")", a_fs_dir->addr);
 				return 1;
 			}
 
@@ -429,8 +431,21 @@ tsk_fs_dir_getsize(const TSK_FS_DIR * a_fs_dir)
  * @param a_idx Index of file in directory to open (0-based)
  * @returns NULL on error
  */
+TSK_FS_FILE*
+tsk_fs_dir_get(const TSK_FS_DIR* a_fs_dir, size_t a_idx)
+{
+    return tsk_fs_dir_get2(a_fs_dir, a_idx, TRUE);
+}
+
+/** \ingroup fslib
+* Return a specific file or subdirectory from an open directory.
+ * @param a_fs_dir Directory to analyze
+ * @param a_idx Index of file in directory to open (0-based)
+ * @param load_attributes Boolean indicating if the file attributes should be loaded
+ * @returns NULL on error
+ */
 TSK_FS_FILE *
-tsk_fs_dir_get(const TSK_FS_DIR * a_fs_dir, size_t a_idx)
+tsk_fs_dir_get2(const TSK_FS_DIR * a_fs_dir, size_t a_idx, size_t load_attributes)
 {
     TSK_FS_NAME *fs_name;
     TSK_FS_FILE *fs_file;
@@ -468,8 +483,8 @@ tsk_fs_dir_get(const TSK_FS_DIR * a_fs_dir, size_t a_idx)
 
     /* load the fs_meta structure if possible.
      * Must have non-zero inode addr or have allocated name (if inode is 0) */
-    if (((fs_name->meta_addr)
-            || (fs_name->flags & TSK_FS_NAME_FLAG_ALLOC))) {
+    if (load_attributes && (((fs_name->meta_addr)
+            || (fs_name->flags & TSK_FS_NAME_FLAG_ALLOC)))) {
         if (a_fs_dir->fs_info->file_add_meta(a_fs_dir->fs_info, fs_file,
                 fs_name->meta_addr)) {
             if (tsk_verbose)
@@ -652,13 +667,16 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
     TSK_INUM_T a_addr, TSK_FS_DIR_WALK_FLAG_ENUM a_flags,
     TSK_FS_DIR_WALK_CB a_action, void *a_ptr, int macro_recursion_depth)
 {
-    TSK_FS_DIR *fs_dir;
-    TSK_FS_FILE *fs_file;
     size_t i;
     int* indexToOrderedIndex = NULL;
 
     // get the list of entries in the directory
-    if ((fs_dir = tsk_fs_dir_open_meta_internal(a_fs, a_addr, macro_recursion_depth + 1)) == NULL) {
+    std::unique_ptr<TSK_FS_DIR, decltype(&tsk_fs_dir_close)> fs_dir{
+        tsk_fs_dir_open_meta_internal(a_fs, a_addr, macro_recursion_depth + 1),
+        tsk_fs_dir_close
+    };
+
+    if (!fs_dir) {
         return TSK_WALK_ERROR;
     }
 
@@ -666,11 +684,9 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
     if (a_addr == a_fs->root_inum) {
         indexToOrderedIndex = (int *)tsk_malloc(fs_dir->names_used * sizeof(int));
         if (indexToOrderedIndex == NULL) {
-            tsk_fs_dir_close(fs_dir);
             return TSK_WALK_ERROR;
         }
         if (TSK_OK != prioritizeDirNames(fs_dir->names, fs_dir->names_used, indexToOrderedIndex)) {
-            tsk_fs_dir_close(fs_dir);
             return TSK_WALK_ERROR;
         }
     }
@@ -678,8 +694,12 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
     /* Allocate a file structure for the callbacks.  We
      * will allocate fs_meta structures as needed and
      * point into the fs_dir structure for the names. */
-    if ((fs_file = tsk_fs_file_alloc(a_fs)) == NULL) {
-        tsk_fs_dir_close(fs_dir);
+    std::unique_ptr<TSK_FS_FILE, decltype(&tsk_fs_file_close)> fs_file{
+        tsk_fs_file_alloc(a_fs),
+        tsk_fs_file_close
+    };
+
+    if (!fs_file) {
         if (indexToOrderedIndex != NULL) {
             free(indexToOrderedIndex);
         }
@@ -701,27 +721,25 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
 
         /* load the fs_meta structure if possible.
          * Must have non-zero inode addr or have allocated name (if inode is 0) */
-        if (((fs_file->name->meta_addr)
-                || (fs_file->name->flags & TSK_FS_NAME_FLAG_ALLOC))) {
-
+        if (fs_file->name->meta_addr
+                || (fs_file->name->flags & TSK_FS_NAME_FLAG_ALLOC)) {
             /* Note that the NTFS code behind here has a slight hack to use the
              * correct sequence number based on the data in fs_file->name */
-            if (a_fs->file_add_meta(a_fs, fs_file,
+            if (a_fs->file_add_meta(a_fs, fs_file.get(),
                     fs_file->name->meta_addr)) {
                 if (tsk_verbose)
                     tsk_error_print(stderr);
                 tsk_error_reset();
             }
         }
-
         // call the action if we have the right flags.
-        if ((fs_file->name->flags & a_flags) == fs_file->name->flags) {
-
-            retval = a_action(fs_file, a_dinfo->dirs, a_ptr);
+        const TSK_FS_NAME_FLAG_ENUM n_flags =
+            (TSK_FS_NAME_FLAG_ENUM) (((a_flags & TSK_FS_DIR_WALK_FLAG_ALLOC) ? TSK_FS_NAME_FLAG_ALLOC : 0) |
+            ((a_flags & TSK_FS_DIR_WALK_FLAG_UNALLOC) ? TSK_FS_NAME_FLAG_UNALLOC : 0));
+        if ((fs_file->name->flags & n_flags) == fs_file->name->flags) {
+            retval = a_action(fs_file.get(), a_dinfo->dirs, a_ptr);
             if (retval == TSK_WALK_STOP) {
-                tsk_fs_dir_close(fs_dir);
                 fs_file->name = NULL;
-                tsk_fs_file_close(fs_file);
 
                 if (indexToOrderedIndex != NULL) {
                     free(indexToOrderedIndex);
@@ -738,9 +756,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
                 return TSK_WALK_STOP;
             }
             else if (retval == TSK_WALK_ERROR) {
-                tsk_fs_dir_close(fs_dir);
                 fs_file->name = NULL;
-                tsk_fs_file_close(fs_file);
                 if (indexToOrderedIndex != NULL) {
                     free(indexToOrderedIndex);
                 }
@@ -762,16 +778,15 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
             }
         }
 
-
         /* Optimization. If we are about to recurse into the
          * orphan directory and we are the last item in the
          * directory and the flag has been set to save inum_named,
          * then save inum_named now to FS_INFO so that we can use
          * it for the orphan folder.  Otherwise, we do a full
          * inode walk again for nothing. */
-        if ((fs_file->name->meta_addr == TSK_FS_ORPHANDIR_INUM(a_fs)) &&
-            (i == fs_dir->names_used-1) &&
-            (a_dinfo->save_inum_named == 1)) {
+        if (fs_file->name->meta_addr == TSK_FS_ORPHANDIR_INUM(a_fs) &&
+            i == fs_dir->names_used-1 &&
+            a_dinfo->save_inum_named == 1) {
             save_inum_named(a_fs, a_dinfo);
             a_dinfo->save_inum_named = 0;
         }
@@ -805,9 +820,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
 
                 if (tsk_stack_push(a_dinfo->stack_seen,
                         fs_file->name->meta_addr)) {
-                    tsk_fs_dir_close(fs_dir);
                     fs_file->name = NULL;
-                    tsk_fs_file_close(fs_file);
                     if (indexToOrderedIndex != NULL) {
                         free(indexToOrderedIndex);
                     }
@@ -833,9 +846,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
                             PRIuINUM " exceeded max length / depth\n", fs_file->name->meta_addr);
                     }
 
-                    tsk_fs_dir_close(fs_dir);
                     fs_file->name = NULL;
-                    tsk_fs_file_close(fs_file);
                     if (indexToOrderedIndex != NULL) {
                         free(indexToOrderedIndex);
                     }
@@ -868,9 +879,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
                      * did not load, but if we ran out
                      * of memory we should stop */
                     if (tsk_error_get_errno() & TSK_ERR_AUX) {
-                        tsk_fs_dir_close(fs_dir);
                         fs_file->name = NULL;
-                        tsk_fs_file_close(fs_file);
 
                         if (indexToOrderedIndex != NULL) {
                             free(indexToOrderedIndex);
@@ -888,9 +897,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
                     tsk_error_reset();
                 }
                 else if (retval == TSK_WALK_STOP) {
-                    tsk_fs_dir_close(fs_dir);
                     fs_file->name = NULL;
-                    tsk_fs_file_close(fs_file);
 
                     if (indexToOrderedIndex != NULL) {
                         free(indexToOrderedIndex);
@@ -901,6 +908,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
                 // reset the save status
                 if (fs_file->name->meta_addr ==
                     TSK_FS_ORPHANDIR_INUM(a_fs)) {
+
                     a_dinfo->save_inum_named = save_bak;
                 }
 
@@ -910,6 +918,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
                     *a_dinfo->didx[a_dinfo->depth] = '\0';
             }
             else {
+
                 if (tsk_verbose)
                     fprintf(stderr,
                         "tsk_fs_dir_walk_recursive: Loop detected with address %"
@@ -927,9 +936,7 @@ tsk_fs_dir_walk_recursive(TSK_FS_INFO * a_fs, DENT_DINFO * a_dinfo,
         }
     }
 
-    tsk_fs_dir_close(fs_dir);
     fs_file->name = NULL;
-    tsk_fs_file_close(fs_file);
 
     if (indexToOrderedIndex != NULL) {
         free(indexToOrderedIndex);
@@ -1003,10 +1010,12 @@ tsk_fs_dir_walk_internal(TSK_FS_INFO * a_fs, TSK_INUM_T a_addr,
     // if we were saving the list of named files in the temp list,
     // then now save them to FS_INFO
     if (dinfo.save_inum_named == 1) {
+
         if (retval != TSK_WALK_CONT) {
             /* There was an error and we stopped early, so we should get
              * rid of the partial list we were making.
              */
+
             tsk_list_free(dinfo.list_inum_named);
             dinfo.list_inum_named = NULL;
         }
@@ -1167,7 +1176,7 @@ tsk_fs_dir_load_inum_named(TSK_FS_INFO * a_fs)
      * be fewer callbacks for UNALLOC than ALLOC.
      */
     if (tsk_fs_dir_walk_internal(a_fs, a_fs->root_inum,
-            (TSK_FS_DIR_WALK_FLAG_ENUM) (TSK_FS_NAME_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_NOORPHAN), load_named_dir_walk_cb, NULL, 0)) {
+            (TSK_FS_DIR_WALK_FLAG_ENUM) (TSK_FS_DIR_WALK_FLAG_UNALLOC | TSK_FS_DIR_WALK_FLAG_RECURSE | TSK_FS_DIR_WALK_FLAG_NOORPHAN), load_named_dir_walk_cb, NULL, 0)) {
         tsk_error_errstr2_concat
             ("- tsk_fs_dir_load_inum_named: identifying inodes allocated by file names");
         return TSK_ERR;

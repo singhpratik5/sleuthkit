@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
 
-AC_INIT([sleuthkit],[4.12.1])
+AC_INIT([sleuthkit], [4.13.1])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([tsk/base/tsk_base.h])
@@ -24,9 +24,6 @@ AC_PROG_MAKE_SET
 AC_PATH_PROG(PERL, perl)
 
 TSK_CHECK_PROG_PKGCONFIG
-
-
-
 
 dnl Checks for header files.
 dnl AC_HEADER_MAJOR
@@ -69,11 +66,9 @@ AC_CHECK_FUNCS([ishexnumber err errx warn warnx vasprintf getrusage])
 AC_CHECK_FUNCS([strlcpy strlcat strnlen])
 
 AX_PTHREAD([
-    AC_DEFINE(HAVE_PTHREAD,1,[Define if you have POSIX threads libraries and header files.])
-    LIBS="$PTHREAD_LIBS $LIBS"
-    CPPFLAGS="$CPPFLAGS $PTHREAD_CFLAGS"
-    LDFLAGS="$LDFLAGS $PTHREAD_CFLAGS"
-    CC="$PTHREAD_CC"],[])
+    AC_DEFINE(HAVE_PTHREAD, 1, [Define if you have POSIX threads libraries and header files.])
+    CC="$PTHREAD_CC"
+    CXX="$PTHREAD_CXX"], [])
 
 dnl Permit single-threaded builds
 AC_ARG_ENABLE([multithreading],
@@ -90,15 +85,8 @@ AC_ARG_ENABLE([java],
 dnl Checks for libraries.
 
 dnl Some platforms will complain about missing included functions if libstdc++ is not included.
-AC_CHECK_LIB(stdc++, main, , AC_MSG_ERROR([missing libstdc++]))
-AC_CHECK_HEADERS(list, , , AC_MSG_ERROR([missing STL list class header]))
-AC_CHECK_HEADERS(map, , , AC_MSG_ERROR([missing STL map class header]))
-AC_CHECK_HEADERS(queue, , , AC_MSG_ERROR([missing STL queue class header]))
-AC_CHECK_HEADERS(set, , , AC_MSG_ERROR([missing STL set class header]))
-AC_CHECK_HEADERS(stack, , , AC_MSG_ERROR([missing STL stack class header]))
-AC_CHECK_HEADERS(streambuf, , , AC_MSG_ERROR([missing STL streambuf class header]))
-AC_CHECK_HEADERS(string, , , AC_MSG_ERROR([missing STL string class header]))
-AC_CHECK_HEADERS(vector, , , AC_MSG_ERROR([missing STL vector class header]))
+AC_CHECK_LIB(stdc++, main, [], AC_MSG_ERROR([missing libstdc++]))
+AC_SUBST([STDCPP_LIBS], ['-lstdc++'])
 
 dnl Check for sqlite and its dependencies
 AS_IF([test "x$ac_cv_prog_PKGCONFIG" = "xyes"],
@@ -106,9 +94,7 @@ AS_IF([test "x$ac_cv_prog_PKGCONFIG" = "xyes"],
     SAVED_AX_PACKAGE_REQUIRES_PRIVATE="$AX_PACKAGE_REQUIRES_PRIVATE"
     TSK_PKG_CHECK_MODULES([SQLITE3], [], [sqlite3],
     [
-      CFLAGS="$CFLAGS $SQLITE3_CFLAGS"
-      CXXFLAGS="$CXXFLAGS $SQLITE3_CFLAGS"
-      LIBS="$LIBS $SQLITE3_LIBS"
+      SQLITE3_CXXFLAGS="$SQLITE3_CFLAGS"
     ],
     [
       AX_PACKAGE_REQUIRES_PRIVATE="$SAVED_AX_PACKAGE_REQUIRES_PRIVATE"
@@ -122,8 +108,10 @@ AS_IF([test "x$ax_sqlite3" != "xyes"],
   [
     AC_CHECK_HEADERS(
       [sqlite3.h],
-      [AC_CHECK_LIB([dl], [dlopen])
-       AC_CHECK_LIB([sqlite3], [sqlite3_open], [ax_sqlite3=yes], [])]
+      [
+        AC_CHECK_LIB([dl], [dlopen], [ax_dl=yes], [])
+        AC_CHECK_LIB([sqlite3], [sqlite3_open], [ax_sqlite3=yes], [])
+      ]
     )
   ]
 )
@@ -131,21 +119,29 @@ AS_IF([test "x$ax_sqlite3" != "xyes"],
 dnl Compile the bundled sqlite if there is no system one installed
 AC_MSG_CHECKING(which sqlite3 to use)
 AS_IF([test "x$ax_sqlite3" = "xyes"],
-      [AC_MSG_RESULT([system])
-       PACKAGE_LIBS_PRIVATE="$PACKAGE_LIBS_PRIVATE -lsqlite3"],
+      [
+        AC_MSG_RESULT([system])
+        PACKAGE_LIBS_PRIVATE="$PACKAGE_LIBS_PRIVATE -lsqlite3"
+        SQLITE3_LIBS='-lsqlite3'
+        AS_IF([test "x$ax_dl" = "xyes"], [SQLITE3_LIBS="$SQLITE3_LIBS -ldl"])
+      ],
       [AC_MSG_RESULT([bundled])
-       CPPFLAGS="$CFLAGS -DSQLITE_OMIT_LOAD_EXTENSION"]
+       SQLITE3_CPPFLAGS="-DSQLITE_OMIT_LOAD_EXTENSION"]
 )
 AM_CONDITIONAL([HAVE_LIBSQLITE3], [test "x$ax_sqlite3" = "xyes"])
 
+AC_SUBST([SQLITE3_CPPFLAGS])
+AC_SUBST([SQLITE3_CXXFLAGS])
+AC_SUBST([SQLITE3_LIBS])
+
 dnl Check if we should link with OpenSSL
-TSK_OPT_DEP_CHECK([libcrypto], [LIBOPENSSL], [libcrypto], [openssl/sha.h], [crypto], [SHA1])
+TSK_OPT_DEP_CHECK([libcrypto], [CRYPTO], [libcrypto], [openssl/sha.h], [crypto], [SHA1])
 dnl Check if we should link with afflib
 dnl note that afflib/utils.h explicitly checks for openssl/pem.h, so we need to test for it also
-TSK_OPT_DEP_CHECK([afflib], [], [], [afflib/afflib.h], [afflib], [af_open])
+TSK_OPT_DEP_CHECK([afflib], [AFFLIB], [], [afflib/afflib.h], [afflib], [af_open])
 AC_CHECK_HEADERS([openssl/pem.h])
 dnl Check if we should link with libaff4
-TSK_OPT_DEP_CHECK([libaff4], [], [], [aff4/libaff4-c.h], [aff4], [AFF4_version])
+TSK_OPT_DEP_CHECK([libaff4], [AFF4], [], [aff4/libaff4-c.h], [aff4], [AFF4_version])
 dnl Check if we should link with zlib
 TSK_OPT_DEP_CHECK([zlib], [ZLIB], [zlib], [zlib.h], [z], [inflate])
 dnl Check if we should link with libbfio
@@ -177,7 +173,7 @@ AS_IF(
 )
 
 dnl Check if we should link with libvslvm
-TSK_OPT_DEP_CHECK([libvslvm], [LVM], [libvslvm], [libvslvm.h], [vslvm], [libvslvm_get_version])
+TSK_OPT_DEP_CHECK([libvslvm], [VSLVM], [libvslvm], [libvslvm.h], [vslvm], [libvslvm_get_version])
 
 dnl check for user online input
 AC_ARG_ENABLE([offline],
@@ -199,13 +195,18 @@ AM_COND_IF([CUSTOM_DEFAULT_JAR_LOCATION],
 )
 
 dnl Test for the various Java things that we need for bindings
+dnl First, test is ant is available since we now use it for the build system
+dnl But don't make it required
+AC_PATH_PROG([ANT], [ant], [no])
+AM_CONDITIONAL([ANT_DETECTED], [test "x$ANT" != "xno"])
 AS_IF([test "x$enable_java" != "xno"], [
     dnl javac is needed to compile the JAR file
     AX_PROG_JAVAC
     AS_IF(
         [test "x$JAVAC" = x],
         [enable_java=no],
-        [AX_JNI_INCLUDE_DIR
+        [
+	AX_JNI_INCLUDE_DIR
         for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS
         do
             JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR"
@@ -217,15 +218,19 @@ AS_IF([test "x$enable_java" != "xno"], [
         dnl we had one report of a system with javac and not java
         AX_PROG_JAVA
 
-        dnl Test is ant is available
-        AC_PATH_PROG([ANT_FOUND], [ant], [])
-	])
-
+        if test "x$ANT" = "xno"; then
+            AC_MSG_ERROR([Apache Ant is required but was not found. Install Ant and try again.])
+        fi
+        AC_SUBST(ANT)
+	]
+    )
 ]) dnl test enable_java
+
+
 
 dnl if we found everything we need, set ax_java_support for the
 dnl status message and set X_JNI for use in Makefile
-AS_IF([test "x$JNI_CPPFLAGS" != x && test "x$ANT_FOUND" != x && test "x$JAVA" != x], [ax_java_support=yes], [ax_java_support=no])
+AS_IF([test "x$JNI_CPPFLAGS" != x && test "x$ANT" != x && test "x$JAVA" != x], [ax_java_support=yes], [ax_java_support=no])
 AM_CONDITIONAL([X_JNI],[test "x$ax_java_support" = "xyes"])
 
 dnl Dependencies for OSS-Fuzz
@@ -262,6 +267,29 @@ AC_CONFIG_COMMANDS([tsk/tsk_incs.h],
     ac_cv_header_inttypes_h=$ac_cv_header_inttypes_h
     ac_cv_header_sys_param_h=$ac_cv_header_sys_param_h
     ax_multithread=$ax_multithread])
+
+dnl ################################################################
+dnl ## Set TSK_LIB as appropriate for the host
+dnl ##
+AC_CANONICAL_HOST
+
+case "$host_os" in
+    darwin*)
+        TSK_LIB="libtsk.dylib"
+        ;;
+    linux*)
+        TSK_LIB="libtsk.so"
+        ;;
+    *)
+        TSK_LIB="libtsk.la"  # Default for unknown platforms
+        ;;
+esac
+AC_SUBST(TSK_LIB)
+dnl ################
+
+
+dnl ################################################################
+dnl ## set per-host libtool flags
 
 AC_MSG_CHECKING([if libtool needs -no-undefined flag to build shared libraries])
 case "$host" in
