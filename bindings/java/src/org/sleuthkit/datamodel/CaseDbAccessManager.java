@@ -732,8 +732,17 @@ public final class CaseDbAccessManager {
 	/**
 	 * Performs a select statement query with the given case prepared statement.
 	 *
+	 * NOTE: Run optimize only runs for SQLite, and is not applicable to
+	 * postgres. Optimize seems to work on a connection by connection basis.
+	 * Given the connection pool, it must be assumed that any new connection has
+	 * not necessarily been optimized. Optimize should be ran in situations
+	 * where statistics in the database would change the query plan thus
+	 * improving query speed. In most instances, running optimize is a no-op.
+	 * See https://sqlite.org/pragma.html#pragma_optimize for more information.
+	 *
 	 * @param preparedStatement The case prepared statement.
 	 * @param runOptimize       Runs optimization before executing the query.
+	 *                          See note above.
 	 * @param queryCallback     The callback to handle the result set.
 	 *
 	 * @throws TskCoreException
