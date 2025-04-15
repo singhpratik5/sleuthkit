@@ -188,6 +188,8 @@ unit_tests/base/test_base
 # EMACS backup files
 *~
 
+.dirstamp
+
 # Mac Junk
 .DS_Store
 
