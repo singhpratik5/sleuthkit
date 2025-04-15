@@ -153,6 +153,10 @@ jobs:
         run: |
           make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 TESTS=
 
+      - name: run make check
+        run: |
+          make check
+
       - name: run the tsk_loaddb test
         run: |
           test/tools/autotools/test_loaddb.sh
