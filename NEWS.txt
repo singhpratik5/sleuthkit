@@ -6,7 +6,8 @@
   - Updated to Visual Studio 2019
   - Updated logical folder caching
   - Java changes listed below
-- It does not have the experimental btrfs or bfs, and other changes that went into 4.13.0. Those will go into a future release (perhaps as a v5 so that there can be parallel releases). 
+- Use of the optimize pragma was added to the Java SQLite code.
+- It does NOT have the experimental btrfs or bfs, and other changes that went into 4.13.0. Those will go into a future release (perhaps as a v5 so that there can be parallel releases). 
 
 
 
