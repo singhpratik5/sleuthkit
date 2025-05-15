@@ -20,6 +20,8 @@
 char *progname = "unknown";
 int tsk_verbose = 0;
 
+/* Optional error listener */
+TSK_ERROR_LISTENER_CB error_listener = NULL;
 
 /* Error messages */
 static const char *tsk_err_aux_str[TSK_ERR_IMG_MAX] = {
@@ -82,6 +84,7 @@ static const char *tsk_err_fs_str[TSK_ERR_FS_MAX] = {
     "Possible encryption detected",
     "Multiple file system types detected",   // 20
     "BitLocker initialization failed",
+    "Error loading large directory",
 };
 
 static const char *tsk_err_hdb_str[TSK_ERR_HDB_MAX] = {
@@ -336,6 +339,9 @@ tsk_error_set_errstr(const char *format, ...)
     vsnprintf(tsk_error_get_info()->errstr, TSK_ERROR_STRING_MAX_LENGTH,
         format, args);
     va_end(args);
+    if (error_listener != NULL) {
+        error_listener((uint32_t)tsk_error_get_info()->t_errno, tsk_error_get_info()->errstr);
+    }
 }
 
 /**
@@ -349,6 +355,9 @@ tsk_error_vset_errstr(const char *format, va_list args)
 {
     vsnprintf(tsk_error_get_info()->errstr, TSK_ERROR_STRING_MAX_LENGTH,
         format, args);
+    if (error_listener != NULL) {
+        error_listener((uint32_t)tsk_error_get_info()->t_errno, tsk_error_get_info()->errstr);
+    }
 }
 
 /**
@@ -413,31 +422,17 @@ tsk_error_errstr2_concat(const char *format, ...)
 }
 
 /**
-* Add info about a directory that was skipping during dir walk for being too large
+* Add a method that will be sent most errors (in additional to the processing TSK already does).
 * 
-* @param fs_offset  The file system offset
-* @param addr       The metadata addr for the directory
-*/
-void 
-tsk_error_add_large_dir(int64_t fs_offset, int64_t addr) {
-    char* dirStr = tsk_error_get_info()->large_dir_list;
-    int current_length = (int)(strlen(dirStr));
-    int remaining = TSK_ERROR_STRING_MAX_LENGTH - current_length;
-    snprintf(&dirStr[current_length], remaining, "%016" PRIx64 "-%016" PRIx64 "|", fs_offset, addr);
-}
-
-/**
- * \ingroup baselib
-* Get the list of directories that were skipped because they were too large to open.
-* Format will be a series of entries of the form: (file system offset)-(addr)| (in hex with leading zeros).
-* Each entry will be 34 bytes long.
-* Ex: 0000000000000000-0000000400000000|
+* This is a bit limited since adding an error is a multistep process. The listener is invoked when
+* tsk_error_set_errstr() is called. Our convention is that tsk_error_set_errno() is called first so
+* the errno should be accurate. We would miss anything set to errstr2 but this is not very common.
 * 
-* @return list of file system offsets/dir addrs
+* @param listener   Method that should take arguments (uint32_t, const char*)
 */
-const char*
-tsk_error_get_large_dir_list() {
-    return tsk_error_get_info()->large_dir_list;
+void
+tsk_error_set_error_listener(TSK_ERROR_LISTENER_CB listener) {
+    error_listener = listener;
 }
 
 /**
@@ -467,7 +462,6 @@ tsk_error_print(FILE * hFile)
 /**
  * \ingroup baselib
  * Clear the error number and error message.
- * Does not clear large dir list.
  */
 void
 tsk_error_reset()
@@ -479,19 +473,5 @@ tsk_error_reset()
        info->errstr[0] = 0;
        info->errstr2[0] = 0;
        info->errstr_print[0] = 0;
-    }
-}
-
-/**
- * \ingroup baselib
- * Clear the large dir list only
- */
-void
-tsk_error_reset_large_dir_list()
-{
-    TSK_ERROR_INFO* info = tsk_error_get_info();
-
-    if (info != NULL) {
-        info->large_dir_list[0] = 0;
     }
 }

@@ -65,13 +65,13 @@ extern "C" {
 #endif
 
 #define TSK_ERROR_STRING_MAX_LENGTH 1024
+typedef void(*TSK_ERROR_LISTENER_CB) (unsigned int errno, const char* errmsg);
 
     typedef struct {
         uint32_t t_errno;
         char errstr[TSK_ERROR_STRING_MAX_LENGTH + 1];
         char errstr2[TSK_ERROR_STRING_MAX_LENGTH + 1];
         char errstr_print[TSK_ERROR_STRING_MAX_LENGTH + 1];
-        char large_dir_list[TSK_ERROR_STRING_MAX_LENGTH + 1];
     } TSK_ERROR_INFO;
 
     /* The core function here is to retrieve the per-thread error structure. Other functions to follow
@@ -98,15 +98,13 @@ extern "C" {
     extern void tsk_error_errstr2_concat(const char *format,
         ...) TSK_ERROR_FORMAT_ATTRIBUTE(1, 2);
 
-    extern void tsk_error_add_large_dir(int64_t fs_offset, int64_t addr);
-    extern const char* tsk_error_get_large_dir_list();
+    extern void tsk_error_set_error_listener(TSK_ERROR_LISTENER_CB listener);
 
     /** Return a human-readable form of tsk_error_get_errno **/
     extern const char *tsk_error_get();
 
     extern void tsk_error_print(FILE *);
     extern void tsk_error_reset();
-    extern void tsk_error_reset_large_dir_list();
 
 
 #ifdef TSK_MULTITHREAD_LIB
@@ -369,7 +367,8 @@ extern "C" {
 #define TSK_ERR_FS_POSSIBLY_ENCRYPTED    (TSK_ERR_FS | 19)
 #define TSK_ERR_FS_MULTTYPE    (TSK_ERR_FS | 20)
 #define TSK_ERR_FS_BITLOCKER_ERROR    (TSK_ERR_FS | 21)
-#define TSK_ERR_FS_MAX		22
+#define TSK_ERR_FS_LARGE_DIR_ERROR    (TSK_ERR_FS | 22)
+#define TSK_ERR_FS_MAX		23
 
 #define TSK_ERR_HDB_UNKTYPE     (TSK_ERR_HDB | 0)
 #define TSK_ERR_HDB_UNSUPTYPE   (TSK_ERR_HDB | 1)
