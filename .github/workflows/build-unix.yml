@@ -260,8 +260,6 @@ jobs:
         run: |
           if [ -x Makefile ]; then make distclean ; fi
 
-      # Codecov steps removed here
-
       - name: Create any artifacts that we need to keep
         if: ${{ matrix.keep_artifacts == 'yes' }}
         run: |
