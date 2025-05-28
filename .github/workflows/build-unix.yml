@@ -1,8 +1,5 @@
 name: "Build"
 
-# For docker container comparable to Linux build worker:
-#   docker run -it docker.io/library/ubuntu:22.04 bash
-
 on:
   push:
     branches:
@@ -166,8 +163,6 @@ jobs:
           echo ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer >> $GITHUB_ENV
           echo ASAN_OPTIONS="symbolize=1:abort_on_error=1" >> $GITHUB_ENV
 
-
-
       - name: Install Mingw packages and setup for cross-compiling
         if: ${{ matrix.os == 'mingw' }}
         run: |
@@ -175,12 +170,6 @@ jobs:
           sudo apt update
           sudo apt install autoconf automake libtool make pkg-config mingw-w64 mingw-w64-tools libz-mingw-w64-dev wine32 wine64 wget
           sudo update-alternatives --set ${{ matrix.arch }}-w64-mingw32-g++ /usr/bin/${{ matrix.arch }}-w64-mingw32-g++-posix
-          # This is not working; also requires mingw-w64-x86_64-libgnurx
-          # echo === installing libmagic for mingw ===
-          # wget -q https://astron.com/pub/file/file-5.44.tar.gz # Check for the latest version at https://astron.com/pub/file/
-          # tar -xzf file-5.44.tar.gz
-          # cd file-5.44
-          # ./configure -q ${{ matrix.configure_optsnj}} && make V=0 && sudo make install
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -213,7 +202,7 @@ jobs:
         if: ${{ matrix.os != 'mingw' }}
         run: |
           echo SLEUTHKIT_TEST_DATA_DIR=$SLEUTHKIT_TEST_DATA_DIR
-          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
+          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" [...]
 
       - name: Run make check on Linux (trap failure)
         if: ${{ matrix.os == 'linux' }}
@@ -257,7 +246,7 @@ jobs:
           WINEPATH: ${{ matrix.winepath }}
           WINEPREFIX: ${{ matrix.wineprefix }}
         run: |
-          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
+          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n'[...]
 
       - name: Clean up
         run: |
@@ -277,29 +266,7 @@ jobs:
         run: |
           if [ -x Makefile ]; then make distclean ; fi
 
-      - name: Run configure for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          ./configure ${{ matrix.configure_opts }} \
-            CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' \
-          CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
-
-      - name: Run make for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          make -j check V=0
-
-      - name: run gcov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          gcov $(find . -name '*.gcda')
-
-      - name: Upload codecov report
-        if: ${{ matrix.codecov == 'yes' }}
-        uses: codecov/codecov-action@v5
-        with:
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+      # Codecov steps removed here
 
       - name: Create any artifacts that we need to keep
         if: ${{ matrix.keep_artifacts == 'yes' }}
