@@ -47,7 +47,7 @@ jobs:
 
     - name: Configure with coverage flags
       run: |
-        ./configure CFLAGS="--coverage" CXXFLAGS="--coverage" LDFLAGS="--coverage"
+        ./configure CFLAGS="--coverage -fprofile-update=atomic" CXXFLAGS="--coverage -fprofile-update=atomic" LDFLAGS="--coverage"
 
     - name: Build project
       run: make -j$(nproc)
