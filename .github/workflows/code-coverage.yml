@@ -41,6 +41,10 @@ jobs:
         find . -ls | grep -v '[.]git'
         echo "SLEUTHKIT_TEST_DATA_DIR=$(pwd)" >> $GITHUB_ENV
 
+    - name: Run bootstrap
+      run: |
+        ./bootstrap
+
     - name: Configure with coverage flags
       run: |
         ./configure CFLAGS="--coverage" CXXFLAGS="--coverage" LDFLAGS="--coverage"
