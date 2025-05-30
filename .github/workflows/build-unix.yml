@@ -277,30 +277,6 @@ jobs:
         run: |
           if [ -x Makefile ]; then make distclean ; fi
 
-      - name: Run configure for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          ./configure ${{ matrix.configure_opts }} \
-            CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' \
-          CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
-
-      - name: Run make for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          make -j check V=0
-
-      - name: run gcov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          gcov $(find . -name '*.gcda')
-
-      - name: Upload codecov report
-        if: ${{ matrix.codecov == 'yes' }}
-        uses: codecov/codecov-action@v5
-        with:
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
       - name: Create any artifacts that we need to keep
         if: ${{ matrix.keep_artifacts == 'yes' }}
         run: |
