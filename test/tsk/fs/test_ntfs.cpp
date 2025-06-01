@@ -87,3 +87,24 @@ TEST_CASE("ntfs_attrname_lookup_attrdef_null_and_load_fails", "[ntfs]") {
     int ret = ntfs_attrname_lookup((TSK_FS_INFO*)&ntfs, type, name, sizeof(name));
     REQUIRE(ret == 1);
 }
+
+// Test nt2unixtime with a valid timestamp from 2024
+TEST_CASE("nt2unixtime_valid_2024", "[ntfs]") {
+    uint64_t ntdate = 116444736000000000ULL + (54ULL * 36525ULL * 24ULL * 60ULL * 60ULL * 10000000ULL / 100ULL);
+    uint32_t result = nt2unixtime(ntdate);
+    REQUIRE(result > 0); 
+}
+
+// Test nt2unixtime with a valid timestamp from 2000
+TEST_CASE("nt2unixtime_valid_2000", "[ntfs]") {
+    uint64_t ntdate = 116444736000000000ULL + (30ULL * 36525ULL * 24ULL * 60ULL * 60ULL * 10000000ULL / 100ULL);
+    uint32_t result = nt2unixtime(ntdate);
+    REQUIRE(result > 0); 
+}
+
+// Test nt2unixtime with a valid timestamp from 1970
+TEST_CASE("nt2unixtime_valid_1970", "[ntfs]") {
+    uint64_t ntdate = 116444736000000000ULL + 10000000ULL;
+    uint32_t result = nt2unixtime(ntdate);
+    REQUIRE(result > 0); 
+}
