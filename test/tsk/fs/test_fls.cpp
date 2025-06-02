@@ -62,7 +62,7 @@ TEST_CASE("tsk_fs_fls_nonempty_tpre", "[fls]") {
 
 // Test tsk_fs_fls with disk image file and the root inode
 TEST_CASE("tsk_fs_fls_integration_image_dd", "[fls][integration]") {
-    const char *img_path = "test/data/image/image.dd";
+    const TSK_TCHAR *img_path = _TSK_T("test/data/image/image.dd");
     TSK_IMG_INFO *img = tsk_img_open_sing(img_path, TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open test image: " << img_path << ". Skipping test.");
