@@ -29,24 +29,6 @@ private:
     TSK_FS_INFO* fs = nullptr;
 };
  
-/* These are for other test cases that kept failing */
-
-// callback for inode walk
-static TSK_WALK_RET_ENUM inode_counter_cb(TSK_FS_FILE* fs_file, void* ptr) {
-    (void)fs_file; 
-    int* count = static_cast<int*>(ptr);
-    (*count)++;
-    return TSK_WALK_CONT;
-}
-
-// callback for block walk
-static TSK_WALK_RET_ENUM block_counter_cb(const TSK_FS_BLOCK* fs_block, void* ptr) {
-    (void)fs_block;
-    int* count = static_cast<int*>(ptr);
-    (*count)++;
-    return TSK_WALK_CONT;
-}
-
 // Test get block flags for the first block
 TEST_CASE("ffs_block_getflags_basic", "[ffs]") {
     FfsTestFS testfs(_TSK_T("test/data/image/image.dd"));
