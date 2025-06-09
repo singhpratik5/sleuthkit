@@ -570,7 +570,7 @@ tools_fstools_icat_SOURCES = tools/fstools/icat.cpp
 tools_fstools_ifind_LDADD = $(TSK_LIBS)
 tools_fstools_ifind_SOURCES = tools/fstools/ifind.cpp
 
-tools_fstools_ils_LDADD = $(TSK_LIBS)
+tools_fstools_ils_LDADD = $(TSK_LIBS) tools/libtsktools.la
 tools_fstools_ils_SOURCES = tools/fstools/ils.cpp
 
 tools_fstools_istat_LDADD = $(TSK_LIBS)
