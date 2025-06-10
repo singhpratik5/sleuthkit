@@ -31,7 +31,7 @@ TEST_CASE("test fatfs_open works as expected") {
     }
     SECTION("test for whether FAT check works") {
         TSK_FS_INFO *fs = fatfs_open(img_info, offset, TSK_FS_TYPE_NTFS, 0, 0);
-        REQUIRE(fs == nullptr);  // should fail
+        REQUIRE(fs == nullptr); 
 
         // Check error set correctly
         REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_ARG);
@@ -40,6 +40,7 @@ TEST_CASE("test fatfs_open works as expected") {
     SECTION("sector test") {
         img_info->sector_size=0;
         TSK_FS_INFO *fs = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT32, 0, 0);
+        REQUIRE(fs == nullptr); 
         // Check error set correctly
         REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_ARG);
         REQUIRE(std::string(tsk_error_get_errstr()).find("sector size is 0") != std::string::npos);
@@ -62,11 +63,11 @@ TEST_CASE("walking works as expected") {
     TSK_FS_INFO *fs_info = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT32, 0, 0);
     REQUIRE(fs_info != nullptr);
 
-    auto callback = +[](const TSK_FS_BLOCK *fs_block, void *ptr) -> TSK_WALK_RET_ENUM {
+    auto callback = +[](const TSK_FS_BLOCK *fs_block, void *a_ptr) -> TSK_WALK_RET_ENUM {
         REQUIRE(fs_block != nullptr);
+        (void)a_ptr;
         return TSK_WALK_CONT;
     };
-    void *aptr = nullptr;  // unused in this case
 
 
     SECTION("normal setup, expected workflow") {
