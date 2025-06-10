@@ -202,7 +202,7 @@ jobs:
         run: |
           cd ..
           pwd
-          wget  -q https://digitalcorpora.s3.amazonaws.com/corpora/drives/tsk-2024/sleuthkit_test_data.zip
+          wget  -q https://tsk-tests-taha.s3.ap-southeast-2.amazonaws.com/sleuthkit_test_data.zip
           unzip sleuthkit_test_data.zip
           cd sleuthkit_test_data
           make unpack
