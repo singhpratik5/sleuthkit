@@ -756,6 +756,7 @@ test_catch_runner_SOURCES = \
 	test/tsk/img/test_ewf.cpp \
 	test/tsk/img/test_img_io.cpp \
 	test/tsk/img/test_img_types.cpp \
+	test/tsk/fs/test_fatfs.cpp \
 	test/tsk/img/test_img_open.cpp \
 	test/tsk/img/test_mult_files.cpp \
 	test/tsk/img/test_qcow.cpp \
