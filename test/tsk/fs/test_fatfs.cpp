@@ -12,7 +12,7 @@
 
 TEST_CASE("test fatfs_open works as expected") {
     char* env = getenv("SLEUTHKIT_TEST_DATA_DIR");
-    std::string path = std::string(env) + "/fat/ubnist1.gen3.raw";
+    std::string path = std::string(env) + "/from_brian/5-fat-daylight/daylight.dd";
     const char *image_paths[] = {path.c_str()};
 
     TSK_IMG_INFO *img_info = tsk_img_open_utf8(
@@ -20,10 +20,10 @@ TEST_CASE("test fatfs_open works as expected") {
 
     REQUIRE(img_info != nullptr);
 
-    TSK_OFF_T offset = 63 * 512;
+    TSK_OFF_T offset = 0;
 
     SECTION("normal setup, expected workflow") {
-        TSK_FS_INFO *fs_info = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT32, 0, 0);
+        TSK_FS_INFO *fs_info = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT12, 0, 0);
         REQUIRE(fs_info != nullptr);
         if (fs_info) {
             fs_info->close(fs_info);
@@ -39,7 +39,7 @@ TEST_CASE("test fatfs_open works as expected") {
     }
     SECTION("sector test") {
         img_info->sector_size=0;
-        TSK_FS_INFO *fs = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT32, 0, 0);
+        TSK_FS_INFO *fs = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT12, 0, 0);
         REQUIRE(fs == nullptr); 
         // Check error set correctly
         REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_ARG);
@@ -51,7 +51,7 @@ TEST_CASE("test fatfs_open works as expected") {
 }
 TEST_CASE("walking works as expected") {
     char* env = getenv("SLEUTHKIT_TEST_DATA_DIR");
-    std::string path = std::string(env) + "/fat/ubnist1.gen3.raw";
+    std::string path = std::string(env) + "/from_brian/5-fat-daylight/daylight.dd";
     const char *image_paths[] = {path.c_str()};
 
     TSK_IMG_INFO *img_info = tsk_img_open_utf8(
@@ -59,8 +59,8 @@ TEST_CASE("walking works as expected") {
 
     REQUIRE(img_info != nullptr);
 
-    TSK_OFF_T offset = 63 * 512;
-    TSK_FS_INFO *fs_info = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT32, 0, 0);
+    TSK_OFF_T offset = 0;
+    TSK_FS_INFO *fs_info = fatfs_open(img_info, offset, TSK_FS_TYPE_FAT12, 0, 0);
     REQUIRE(fs_info != nullptr);
 
     auto callback = +[](const TSK_FS_BLOCK *fs_block, void *a_ptr) -> TSK_WALK_RET_ENUM {
@@ -99,4 +99,4 @@ TEST_CASE("walking works as expected") {
     } 
     
 
-}
+} 
