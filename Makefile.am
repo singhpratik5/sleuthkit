@@ -770,6 +770,7 @@ test_catch_runner_SOURCES = \
 	test/tsk/fs/test_ntfs.cpp \
 	test/tsk/fs/test_fls.cpp \
 	test/tsk/fs/test_ffs.cpp \
+	test/tsk/fs/test_nofs_misc.cpp \
 	test/catch_runner.cpp \
 	vendors/catch.hpp
 
