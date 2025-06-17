@@ -34,12 +34,23 @@ TEST_CASE("tsk_fs_nofs_fsstat prints correct info", "[nofs_misc]") {
     fs_info.last_block = 1234;
 
     char buffer[256] = {0};
+#if defined(__GLIBC__) && !defined(__MINGW32__)
+    // Using fmemopen
     FILE *memfile = fmemopen(buffer, sizeof(buffer), "w");
     REQUIRE(memfile != nullptr);
-
     uint8_t ret = tsk_fs_nofs_fsstat(&fs_info, memfile);
     fclose(memfile);
-
+#else
+    // Using tmpfile for MinGW
+    FILE *memfile = tmpfile();
+    REQUIRE(memfile != nullptr);
+    uint8_t ret = tsk_fs_nofs_fsstat(&fs_info, memfile);
+    fflush(memfile);
+    rewind(memfile);
+    size_t n = fread(buffer, 1, sizeof(buffer) - 1, memfile);
+    buffer[n] = 0;
+    fclose(memfile);
+#endif
     REQUIRE(ret == 0);
     REQUIRE(strstr(buffer, "Data") != nullptr);
     REQUIRE(strstr(buffer, "Block Size: 4096") != nullptr);
