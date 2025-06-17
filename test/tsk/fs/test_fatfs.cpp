@@ -12,6 +12,7 @@
 
 TEST_CASE("test fatfs_open works as expected") {
     char* env = getenv("SLEUTHKIT_TEST_DATA_DIR");
+    REQUIRE(env != nullptr); 
     std::string path = std::string(env) + "/from_brian/5-fat-daylight/daylight.dd";
     const char *image_paths[] = {path.c_str()};
 
