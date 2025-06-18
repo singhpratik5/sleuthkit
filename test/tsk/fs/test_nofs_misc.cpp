@@ -52,6 +52,8 @@ TEST_CASE("tsk_fs_nofs_fsstat prints correct info", "[nofs_misc]") {
     fclose(memfile);
 #endif
     REQUIRE(ret == 0);
+    printf("BUFFER: [%s]\n", buffer);
+    printf("strstr(buffer, \"Data\"): %p\n", strstr(buffer, "Data"));
     REQUIRE(strstr(buffer, "Data") != nullptr);
     REQUIRE(strstr(buffer, "Block Size: 4096") != nullptr);
     REQUIRE(strstr(buffer, "Block Range: 0 - 1234") != nullptr);
