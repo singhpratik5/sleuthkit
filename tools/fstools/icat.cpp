@@ -262,7 +262,7 @@ main(int argc, char **argv1)
             exit(1);
         }
 
-        TSK_OFF_T offset = imgaddr * (img == NULL ? 0 : img->sector_size);
+        TSK_OFF_T offset = imgaddr * img->sector_size;
 #if HAVE_LIBVSLVM
         if (pool->ctype == TSK_POOL_TYPE_LVM){
             offset = 0;
