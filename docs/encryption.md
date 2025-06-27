@@ -10,7 +10,7 @@
 * `pstat` returns the APSB super block number which is required for calling tools like `fls`, `istat` and `icat` with the `-k` flag and a supplied password.
 
 * An example encrypted APFS `fls` call may be as follows:
-<pre>  fls -f apfs -o 40 -B 386 -k 'password' my_disk_image.img </pre>
+`fls -f apfs -o 40 -B 386 -k 'password' my_disk_image.img`
 
 ### Notes: 
 * This is one specific use-case that is based on the demonstration in [APFS Support and Demo](https://www.youtube.com/watch?v=k1XPillJ7aw&t=424s). 
