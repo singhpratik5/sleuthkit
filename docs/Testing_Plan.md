@@ -44,7 +44,7 @@ in addition to updating any existing tests to match the changes.
 
 ### Overview
 
-This section describes a new C++-based CLI test runner being introduced to improve the automation and consistency of testing command-line tools in Sleuth Kit (TSK). The runner reads a structured test definition file, executes the specified commands, and compares their outputs against expected results (both stdout and stderr), validating correctness, exit codes, and timing.
+This section describes a new C++-based CLI test runner being introduced to improve the automation and consistency of testing command-line tools in Sleuth Kit (TSK). The runner reads a structured test definition file, executes the specified commands, and compares their outputs against expected results (both stdout and stderr), validating correctness and exit codes.
 
 ### Test Definition Format
 
@@ -55,6 +55,7 @@ Test definitions are stored in a plain text file (e.g., `cli_tests.txt`), with e
 - If no `.stderr` file exists, stderr is expected to be empty.
 
 Example: `hello_1|echo "Hello World"|test/tools/output/hello.stdout|0`
+
 ### Execution Strategy
 
 The test runner performs the following steps for each test:
