@@ -768,8 +768,9 @@ test_catch_runner_SOURCES = \
 	test/tsk/fs/test_fatfs.cpp \
 	test/tsk/util/test_crypto.cpp \
 	test/tsk/hashdb/test_binsrch_index.cpp \
+	test/tsk/fs/test_fs_name.cpp \
+	test/tsk/fs/test_fs_types.cpp \
 	test/tsk/fs/test_ntfs.cpp \
-	test/tsk/fs/test_fls.cpp \
 	test/tsk/fs/test_ffs.cpp \
 	test/catch_runner.cpp \
 	vendors/catch.hpp
