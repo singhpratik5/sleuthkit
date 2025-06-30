@@ -12,30 +12,30 @@
 // Test for tsk_fs_type_toid function
 TEST_CASE("tsk_fs_type_toid converts TSK_TCHAR strings to filesystem type IDs", "[fs_types]") {
     SECTION("recognizes common filesystem types") {
-        TSK_TCHAR ntfs_str[] = {'n', 't', 'f', 's', '\0'};
+        TSK_TCHAR ntfs_str[] =  _TSK_T("ntfs");
         REQUIRE(tsk_fs_type_toid(ntfs_str) == TSK_FS_TYPE_NTFS);
         
-        TSK_TCHAR fat12_str[] = {'f', 'a', 't', '1', '2', '\0'};
+        TSK_TCHAR fat12_str[] = _TSK_T("fat12");
         REQUIRE(tsk_fs_type_toid(fat12_str) == TSK_FS_TYPE_FAT12);
         
-        TSK_TCHAR ext2_str[] = {'e', 'x', 't', '2', '\0'};
+        TSK_TCHAR ext2_str[] = _TSK_T("ext2");
         REQUIRE(tsk_fs_type_toid(ext2_str) == TSK_FS_TYPE_EXT2);
         
-        TSK_TCHAR exfat_str[] = {'e', 'x', 'f', 'a', 't', '\0'};
+        TSK_TCHAR exfat_str[] = _TSK_T("exfat");
         REQUIRE(tsk_fs_type_toid(exfat_str) == TSK_FS_TYPE_EXFAT);
     }
     
     SECTION("handles invalid filesystem types") {
-        TSK_TCHAR unknown_str[] = {'u', 'n', 'k', 'n', 'o', 'w', 'n', '\0'};
+        TSK_TCHAR unknown_str[] = _TSK_T("unknown");
         REQUIRE(tsk_fs_type_toid(unknown_str) == TSK_FS_TYPE_UNSUPP);
         
-        TSK_TCHAR empty_str[] = {'\0'};
+        TSK_TCHAR empty_str[] = _TSK_T("");
         REQUIRE(tsk_fs_type_toid(empty_str) == TSK_FS_TYPE_UNSUPP);
     }
     
     SECTION("truncates strings longer than 15 characters") {
-        TSK_TCHAR long_str[] = {'n', 't', 'f', 's', '_', 'v', 'e', 'r', 'y', 'l', 'o', 'n', 'g', 'n', 'a', 'm', 'e', '\0'};
-        REQUIRE(tsk_fs_type_toid(long_str) == TSK_FS_TYPE_UNSUPP);
+        TSK_TCHAR fs_name_exceeds_limit[] = _TSK_T("ntfs_verylongname");
+        REQUIRE(tsk_fs_type_toid(fs_name_exceeds_limit) == TSK_FS_TYPE_UNSUPP);
     }
 }
 
