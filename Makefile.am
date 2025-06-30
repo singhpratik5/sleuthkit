@@ -765,6 +765,7 @@ test_catch_runner_SOURCES = \
 	test/tsk/img/test_raw.cpp \
 	test/tsk/img/test_vhd.cpp \
 	test/tsk/img/test_vmdk.cpp \
+	test/tsk/fs/test_fatfs.cpp \
 	test/tsk/util/test_crypto.cpp \
 	test/tsk/hashdb/test_binsrch_index.cpp \
 	test/tsk/fs/test_fs_name.cpp \
