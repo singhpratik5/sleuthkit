@@ -1,5 +1,9 @@
 version: 4.6.0.{build}
 
+# Run on all pull requests to any branch
+# Skip branch builds when there are PRs to prevent duplicates
+skip_branch_with_pr: true
+
 environment:
   matrix:
   - job_name: Windows Build
@@ -10,7 +14,6 @@ environment:
     appveyor_build_worker_image: macos-sonoma
 
 matrix:
-
   fast_finish: true
 
 
