@@ -759,7 +759,7 @@ bool case_insensitive_compare(const std::wstring& a, const std::wstring& b) {
 		a.begin(), a.end(),
 		b.begin(), b.end(),
 		[](wchar_t a, wchar_t b) {
-			return std::tolower(a) < std::tolower(b);
+			return towlower(a) < towlower(b);
 		}
 	);
 }
