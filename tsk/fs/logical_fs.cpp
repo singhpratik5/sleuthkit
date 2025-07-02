@@ -85,6 +85,90 @@ filetime_to_timet(FILETIME const& ft)
 }
 #endif
 
+/**
+* Check if the given path contains the folder separator
+* 
+* @param path  The path to test
+* 
+* @return true if path contains folder separator, false otherwise
+*/
+static bool
+contains_folder_separator(const TSK_TCHAR* path) {
+	if (path == NULL) {
+		return false;
+	}
+
+#ifdef TSK_WIN32
+	TSK_TCHAR slash = '\\';
+#else
+	TSK_TCHAR slash = '/';
+#endif
+	return TSTRCHR(path, slash) != NULL;
+}
+
+/**
+* Test whether child_path is a subfolder under parent_path.
+* 
+* @param parent_path  Parent path
+* @param child_path   Child path
+* 
+* @return true if child_path is a subfolder of parent_path
+*/
+static bool
+path_is_subfolder(const TSK_TCHAR* parent_path, const TSK_TCHAR* child_path) {
+
+	if (parent_path == NULL || child_path == NULL) {
+		return false;
+	}
+
+	size_t parent_path_len = TSTRLEN(parent_path);
+	if (parent_path_len + 1 >= TSTRLEN(child_path)) {
+		return false;
+	}
+	
+#ifdef TSK_WIN32
+	if (0 != _wcsnicmp(parent_path, child_path, parent_path_len)) {
+		return false;
+	}
+#endif
+	
+	// Make sure child_path is (parent_path)/(rest)
+#ifdef TSK_WIN32
+	TSK_TCHAR slash = '\\';
+#else
+	TSK_TCHAR slash = '/';
+#endif
+	return child_path[parent_path_len] == slash;
+}
+
+/**
+* Return a pointer to full_path starting after the path_start string.
+* Assumes full_path starts with path_start and a slash.
+* 
+* Ex:
+*   full_path:  dir1/dir2/dir3/dir4
+*   path_start: dir1/dir2
+*   Returns:    dir3/dir4
+*
+* @param full_path  The full path
+* @param path_start The parent path that should be removed (should not include trailing slash)
+* 
+* @return Pointer to remaining string, NULL on error
+*/
+static const TSK_TCHAR*
+get_end_of_path(const TSK_TCHAR* full_path, const TSK_TCHAR* path_start) {
+	if (full_path == NULL || path_start == NULL) {
+		return NULL;
+	}
+
+	if (TSTRLEN(path_start) + 1 >= TSTRLEN(full_path)) {
+		return NULL;
+	}
+
+	// +1 for trailing slash
+	return &(full_path[TSTRLEN(path_start) + 1]);
+}
+
 /*
  * Create a LOGICALFS_SEARCH_HELPER that will run a search for
  * the given inum.
@@ -368,14 +452,14 @@ load_dir_and_file_lists_win(const TSK_TCHAR *base_path, vector<wstring>& file_na
 				if (mode == LOGICALFS_LOAD_ALL || mode == LOGICALFS_LOAD_DIRS_ONLY) {
 					// For the moment at least, skip . and ..
 					if (0 != wcsncmp(fd.cFileName, L"..", 3) && 0 != wcsncmp(fd.cFileName, L".", 3)) {
-						dir_names.push_back(fd.cFileName);
+						dir_names.push_back(wstring(fd.cFileName));
 					}
 				}
 			}
 			else {
 				if (mode == LOGICALFS_LOAD_ALL || mode == LOGICALFS_LOAD_FILES_ONLY) {
 					// For now, consider everything else to be a file
-					file_names.push_back(fd.cFileName);
+					file_names.push_back(wstring(fd.cFileName));
 				}
 			}
 		} while (::FindNextFileW(hFind, &fd));
@@ -425,9 +509,8 @@ find_closest_path_match_in_cache(LOGICALFS_INFO *logical_fs_info, TSK_TCHAR *tar
 			// - The cache entry isn't longer than what we're looking for
 			size_t cache_path_len = TSTRLEN(logical_img_info->inum_cache[i].path);
 			if ((longest_match != target_len) && (cache_path_len > longest_match) && (cache_path_len <= target_len)) {
-				size_t matching_len;
+				size_t matching_len = 0;
 #ifdef TSK_WIN32
-				matching_len = 0;
 				if (0 == _wcsnicmp(target_path, logical_img_info->inum_cache[i].path, cache_path_len)) {
 					matching_len = cache_path_len;
 				}
@@ -473,6 +556,83 @@ find_closest_path_match_in_cache(LOGICALFS_INFO *logical_fs_info, TSK_TCHAR *tar
 			return TSK_ERR;
 		}
 		TSTRNCPY(*best_path, logical_img_info->inum_cache[best_match_index].path, TSTRLEN(logical_img_info->inum_cache[best_match_index].path) + 1);
+	}
+
+	tsk_release_lock(&(img_info->cache_lock));
+	return TSK_OK;
+}
+
+/*
+ * Finds closest sibling match for the given folder.
+ * If best_path is not NULL, caller must free.
+ *
+ * This method does not alter cache ages.
+ * 
+ * @param logical_fs_info The logical file system
+ * @param target_path     The full path being searched for
+ * @param parent_path     The parent path that we found in the cache
+ * @param parent_inum     The addr of the parent path
+ * @param best_name       The best match found in the cache - file name only. (NULL if none are found, must be freed by caller otherwise)
+ * @param best_inum       The inum matching the best path found. LOGICAL_INVALID_INUM if none are found.
+ *
+ * @return TSK_ERR if an error occurred, TSK_OK otherwise
+ */
+static TSK_RETVAL_ENUM
+find_closest_sibling_match_in_cache(LOGICALFS_INFO* logical_fs_info, const TSK_TCHAR* target_path, const TSK_TCHAR* parent_path, TSK_INUM_T parent_inum, TSK_TCHAR** best_name, TSK_INUM_T* best_inum) {
+	TSK_IMG_INFO* img_info = logical_fs_info->fs_info.img_info;
+	IMG_LOGICAL_INFO* logical_img_info = (IMG_LOGICAL_INFO*)img_info;
+	tsk_take_lock(&(img_info->cache_lock));
+
+	*best_inum = LOGICAL_INVALID_INUM;
+	*best_name = NULL;
+
+	int best_match_index = -1;
+	TSK_INUM_T highest_inum = LOGICAL_INVALID_INUM;
+
+	for (int i = 0; i < LOGICAL_INUM_CACHE_LEN; i++) {
+		if (logical_img_info->inum_cache[i].path != NULL 
+			&& logical_img_info->inum_cache[i].inum > parent_inum
+			&& logical_img_info->inum_cache[i].inum > highest_inum) {
+
+			// This entry is useful if:
+			// - path is directly under the target's parent folder
+			// - path comes before the target path alphabetically
+			// - inum is larger than our previous best match
+			if (!path_is_subfolder(parent_path, logical_img_info->inum_cache[i].path)) {
+				continue;
+			}
+
+			const TSK_TCHAR* rest = get_end_of_path(logical_img_info->inum_cache[i].path, parent_path);
+			if (contains_folder_separator(rest)) {
+				continue;
+			}
+
+			if (TSTRICMP(target_path, logical_img_info->inum_cache[i].path) > 0) {
+				highest_inum = logical_img_info->inum_cache[i].inum;
+				best_match_index = i;
+			}
+		}
+	}
+
+	// If we found something, store the values
+	if (best_match_index >= 0) {
+		
+		const TSK_TCHAR* name = get_end_of_path(logical_img_info->inum_cache[best_match_index].path, parent_path);
+		if (name == NULL) {
+			if (tsk_verbose) {
+				tsk_fprintf(stderr, "find_closest_sibling_match_in_cache: get_end_of_path returned null for child: %" PRIttocTSK " parent: %" PRIttocTSK "\n",
+					logical_img_info->inum_cache[best_match_index].path, parent_path);
+			}
+			tsk_release_lock(&(img_info->cache_lock));
+			return TSK_ERR;
+		}
+		*best_name = (TSK_TCHAR*)tsk_malloc(sizeof(TSK_TCHAR) * (TSTRLEN(name) + 1));
+		if (*best_name == NULL) {
+			tsk_release_lock(&(img_info->cache_lock));
+			return TSK_ERR;
+		}
+		TSTRNCPY(*best_name, name, TSTRLEN(name) + 1);
+		*best_inum = logical_img_info->inum_cache[best_match_index].inum;
 	}
 
 	tsk_release_lock(&(img_info->cache_lock));
@@ -574,7 +734,6 @@ add_directory_to_cache(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR *path, T
 		tsk_release_lock(&(img_info->cache_lock));
 		return TSK_OK;
 	}
-
 	clear_inum_cache_entry(logical_img_info, next_slot);
 
 	// Copy the data
@@ -591,9 +750,18 @@ add_directory_to_cache(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR *path, T
 		// We want to remove the random folders first when we run out of space
 		logical_img_info->inum_cache[next_slot].cache_age = LOGICAL_INUM_CACHE_MAX_AGE / 2;
 	}
-
 	tsk_release_lock(&(img_info->cache_lock));
 	return TSK_OK;
+}
+
+bool case_insensitive_compare(const std::wstring& a, const std::wstring& b) {
+	return std::lexicographical_compare(
+		a.begin(), a.end(),
+		b.begin(), b.end(),
+		[](wchar_t a, wchar_t b) {
+			return towlower(a) < towlower(b);
+		}
+	);
 }
 
 /*
@@ -601,14 +769,18 @@ add_directory_to_cache(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR *path, T
  * in parent_path, assign an inum to each and check if this is what we're searching for, calling
  * this method recursively if not.
  *
- * @param parent_path The full path on disk to the directory to open
- * @last_inum_ptr     Pointer to the last assigned inum. Will be updated for every directory found
- * @search_helper     Contains information on what type of search is being performed and will store the results in most cases.
+ * @param logical_fs_info   LOGICALFS_INFO object
+ * @param parent_path       The full path on disk to the directory to open
+ * @param last_inum_ptr     Pointer to the last assigned inum. Will be updated for every directory found
+ * @param sibling_name      Name of sibling file to help limit search (use NULL if no sibling file is known)
+ * @param sibling_inum      Address of sibling file (use LOGICAL_INVALID_INUM if no sibling file is known)
+ * @param search_helper     Contains information on what type of search is being performed and will store the results in most cases.
  *
  * @return TSK_OK if successfull, TSK_ERR otherwise
  */
 static TSK_RETVAL_ENUM
-search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * parent_path, TSK_INUM_T *last_inum_ptr, LOGICALFS_SEARCH_HELPER* search_helper) {
+search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * parent_path, TSK_INUM_T *last_inum_ptr, 
+	const TSK_TCHAR* sibling_name, TSK_INUM_T sibling_inum, LOGICALFS_SEARCH_HELPER* search_helper) {
 
 #ifdef TSK_WIN32
 	vector<wstring> file_names;
@@ -630,7 +802,7 @@ search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * pa
 			return TSK_ERR;
 		}
 #endif
-		sort(file_names.begin(), file_names.end());
+		sort(file_names.begin(), file_names.end(), case_insensitive_compare);
 
 		// Look for the file corresponding to the given inum
 		size_t file_index = (search_helper->target_inum & LOGICAL_INUM_FILE_MASK) - 1;
@@ -662,7 +834,7 @@ search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * pa
 #endif
 
 	// Sort the directory names
-	sort(dir_names.begin(), dir_names.end());
+	sort(dir_names.begin(), dir_names.end(), case_insensitive_compare);
 		
 	// Set up the beginning of full path to the file on disk
 	// The directoy name being added should generally be less than 270 characters, but if necessary we will
@@ -679,7 +851,22 @@ search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * pa
 #endif
 	size_t parent_path_len = TSTRLEN(current_path);
 
-	for (size_t i = 0; i < dir_names.size(); i++) {
+	// If we were given a sibling directory, look for it in the list so we can start the search there
+	size_t starting_dir_index = 0;
+	if (sibling_inum != LOGICAL_INVALID_INUM && sibling_name != NULL) {
+		for (size_t i = 0; i < dir_names.size(); i++) {
+#ifdef TSK_WIN32
+			if (0 == _wcsicmp(dir_names[i].c_str(), sibling_name)) {
+				// Found it. Save the index and adjust the last inum (LOGICAL_INUM_DIR_INC will get added to last_inum_ptr)
+				starting_dir_index = i;
+				*last_inum_ptr = sibling_inum - LOGICAL_INUM_DIR_INC;
+				break;
+			}
+#endif
+		}
+	}
+
+	for (size_t i = starting_dir_index; i < dir_names.size(); i++) {
 
 		// If we don't have space for this name, increase the size of the buffer
 		if (TSTRLEN(dir_names[i].c_str()) > allocated_dir_name_len) {
@@ -742,7 +929,7 @@ search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * pa
 
 		// Check if we've found it
 		if ((search_helper->search_type == LOGICALFS_SEARCH_BY_PATH)
-			&& (TSTRCMP(current_path, search_helper->target_path) == 0)) {
+			&& (TSTRICMP(current_path, search_helper->target_path) == 0)) {
 			search_helper->target_found = true;
 			search_helper->found_inum = current_inum;
 			free(current_path);
@@ -751,7 +938,6 @@ search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * pa
 
 		if ((search_helper->search_type == LOGICALFS_SEARCH_BY_INUM)
 				&& (current_inum == search_helper->target_inum)) {
-
 			search_helper->target_found = true;
 			search_helper->found_path = (TSK_TCHAR*)tsk_malloc(sizeof(TSK_TCHAR) * (TSTRLEN(current_path) + 1));
 			if (search_helper->found_path == NULL)
@@ -760,8 +946,7 @@ search_directory_recursive(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR * pa
 			free(current_path);
 			return TSK_OK;
 		}
-
-		TSK_RETVAL_ENUM result = search_directory_recursive(logical_fs_info, current_path, last_inum_ptr, search_helper);
+		TSK_RETVAL_ENUM result = search_directory_recursive(logical_fs_info, current_path, last_inum_ptr, NULL, LOGICAL_INVALID_INUM, search_helper);
 		if (result != TSK_OK) {
 			free(current_path);
 			return result;
@@ -822,7 +1007,7 @@ load_path_from_inum(LOGICALFS_INFO *logical_fs_info, TSK_INUM_T a_addr) {
 	}
 
 	// Run the search
-	TSK_RETVAL_ENUM result = search_directory_recursive(logical_fs_info, starting_path, &starting_inum, search_helper);
+	TSK_RETVAL_ENUM result = search_directory_recursive(logical_fs_info, starting_path, &starting_inum, NULL, LOGICAL_INVALID_INUM, search_helper);
 
 	if (cache_path != NULL) {
 		free(cache_path);
@@ -936,7 +1121,7 @@ find_max_inum(LOGICALFS_INFO *logical_fs_info) {
 
 	// Run the search to get the maximum directory inum
 	TSK_INUM_T last_assigned_inum = logical_fs_info->fs_info.root_inum;
-	TSK_RETVAL_ENUM result = search_directory_recursive(logical_fs_info, logical_fs_info->base_path, &last_assigned_inum, search_helper);
+	TSK_RETVAL_ENUM result = search_directory_recursive(logical_fs_info, logical_fs_info->base_path, &last_assigned_inum, NULL, LOGICAL_INVALID_INUM, search_helper);
 	free_search_helper(search_helper);
 
 	if (result != TSK_OK) {
@@ -1004,6 +1189,9 @@ get_inum_from_directory_path(LOGICALFS_INFO *logical_fs_info, TSK_TCHAR *base_pa
 	// See how close we can get using the cache
 	TSK_TCHAR *cache_path = NULL;
 	TSK_INUM_T cache_inum = LOGICAL_INVALID_INUM;
+	TSK_TCHAR* sibling_name = NULL;
+	TSK_INUM_T sibling_inum = LOGICAL_INVALID_INUM;
+
 	TSK_RETVAL_ENUM result = find_closest_path_match_in_cache(logical_fs_info, path_buf, &cache_path, &cache_inum);
 	if (result != TSK_OK) {
 		return LOGICAL_INVALID_INUM;
@@ -1017,6 +1205,19 @@ get_inum_from_directory_path(LOGICALFS_INFO *logical_fs_info, TSK_TCHAR *base_pa
 		// Otherwise, we at least have a better place to start the search
 		starting_inum = cache_inum;
 		starting_path = cache_path;
+
+		// If the starting path is the parent of our target, check if there's an entry in the cache for another
+		// folder directly under the parent that comes before our target. This will primarily speed up opening large directories
+		// since each folder is looked up in order.
+		// Ex:
+		//   Target dir:  /a/b/50
+		//   Best match:  /a/b
+		//   Check if we have something like /a/b/40 in the cache (we can't use anything deeper like /a/b/40/1 - has to be at the same level)
+		const TSK_TCHAR* rest = get_end_of_path(path_buf, starting_path);
+		bool haveParentFolder = !contains_folder_separator(rest);
+		if (haveParentFolder) {
+			find_closest_sibling_match_in_cache(logical_fs_info, path_buf, starting_path, starting_inum, &sibling_name, &sibling_inum);
+		}
 	}
 
 	// Create the struct that holds search params and results
@@ -1026,6 +1227,9 @@ get_inum_from_directory_path(LOGICALFS_INFO *logical_fs_info, TSK_TCHAR *base_pa
 		if (cache_path != NULL) {
 			free(cache_path);
 		}
+		if (sibling_name != NULL) {
+			free(sibling_name);
+		}
 		return LOGICAL_INVALID_INUM;
 	}
 
@@ -1033,10 +1237,14 @@ get_inum_from_directory_path(LOGICALFS_INFO *logical_fs_info, TSK_TCHAR *base_pa
 	TSK_INUM_T last_assigned_inum = logical_fs_info->fs_info.root_inum;
 	// use last_assigned_inum variable on non-win32 builds to prevent error
 	(void)last_assigned_inum;
-	result = search_directory_recursive(logical_fs_info, starting_path, &starting_inum, search_helper);
+	result = search_directory_recursive(logical_fs_info, starting_path, &starting_inum, sibling_name, sibling_inum, search_helper);
 
 	if (cache_path != NULL) {
 		free(cache_path);
+	}
+
+	if (sibling_name != NULL) {
+		free(sibling_name);
 	}
 
 	// Return the target inum if found
@@ -1156,8 +1364,8 @@ logicalfs_dir_open_meta(TSK_FS_INFO *a_fs, TSK_FS_DIR ** a_fs_dir,
 #endif
 
 	// Sort the files and directories
-	sort(file_names.begin(), file_names.end());
-	sort(dir_names.begin(), dir_names.end());
+	sort(file_names.begin(), file_names.end(), case_insensitive_compare);
+	sort(dir_names.begin(), dir_names.end(), case_insensitive_compare);
 
 	// Add the folders
 	for (auto it = begin(dir_names); it != end(dir_names); ++it) {
