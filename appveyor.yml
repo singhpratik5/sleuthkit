@@ -93,4 +93,4 @@ for:
       - cd ..
 
     test_script:
-      - SLEUTHKIT_TEST_DATA=$(pwd)/sleuthkit_test_data V=0 make -j check VERBOSE=1
+      - SLEUTHKIT_TEST_DATA_DIR=$(pwd)/sleuthkit_test_data V=0 make -j check VERBOSE=1
