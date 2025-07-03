@@ -90,7 +90,7 @@ bool TskDb::getParentPathAndName(const char *path, const char **ret_parent_path,
         // character found in the string
         size_t position = chptr - parent_path;
 
-        sprintf(parent_name, "%s", chptr+1);  // copy everything after slash into parent_name
+        snprintf(parent_name, MAX_PATH_LENGTH, "%s", chptr+1);  // copy everything after slash into parent_name
         *ret_name = parent_name;
 
         parent_path[position + 1] = '\0';   // add terminating null after last "/"
