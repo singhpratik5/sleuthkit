@@ -253,7 +253,7 @@ void partition_info(const string &name,long i)
 void partition_info(const string &name, const struct timeval &ts)
 {
     char buf[64];
-    sprintf(buf, "%d.%06d",(int)ts.tv_sec, (int)ts.tv_usec);
+    snprintf(buf, sizeof(buf), "%d.%06d",(int)ts.tv_sec, (int)ts.tv_usec);
     partition_info(name,buf,fw_empty);
 }
 
