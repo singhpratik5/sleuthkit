@@ -177,7 +177,7 @@ TSK_OPT_DEP_CHECK([libvslvm], [VSLVM], [libvslvm], [libvslvm.h], [vslvm], [libvs
 
 dnl check for user online input
 AC_ARG_ENABLE([offline],
-    [ AS_HELP_STRING([--enable-offline],[Turn on offline mode])],
+    [AS_HELP_STRING([--enable-offline],[Turn on offline mode])],
     [case "${enableval}" in
 	yes) offline=true ;;
 	no) offline=false ;;
