@@ -6,11 +6,12 @@
 #include "tsk/libtsk.h"
 #include "tsk/fs/tsk_fs.h"
 #include "tsk/fs/tsk_fs_i.h"
+#include "tsk/base/tsk_base.h"
 
 #include "catch.hpp"
 
 // Path to the ext2 test image
-static const char *EXT2_IMAGE_PATH = "test/data/image_ext2.dd";
+#define EXT2_IMAGE_PATH "test/data/image_ext2.dd"
 static const TSK_OFF_T EXT2_IMAGE_OFFSET = 0;
 static const TSK_FS_TYPE_ENUM EXT2_TYPE = TSK_FS_TYPE_EXT2;
 
@@ -27,7 +28,7 @@ static bool setup_ext2_image(TSK_IMG_INFO **img, TSK_FS_INFO **fs) {
         WARN("Ext2 test image not found, skipping unix_misc tests");
         return false;
     }
-    *img = tsk_img_open_sing(EXT2_IMAGE_PATH, TSK_IMG_TYPE_RAW, 0);
+    *img = tsk_img_open_sing(_TSK_T(EXT2_IMAGE_PATH), TSK_IMG_TYPE_RAW, 0);
     if (!*img) {
         WARN("Could not open ext2 test image");
         return false;
@@ -93,7 +94,7 @@ TEST_CASE("unix_misc: tsk_fs_unix_name_cmp compares names", "[unix_misc]") {
 
 // Test for non-unix FS type
 TEST_CASE("unix_misc: tsk_fs_unix_make_data_run with non-Unix FS type returns error", "[unix_misc]") {
-    TSK_IMG_INFO *img = tsk_img_open_sing("test/data/image.dd", TSK_IMG_TYPE_RAW, 0);
+    TSK_IMG_INFO *img = tsk_img_open_sing(_TSK_T("test/data/image.dd"), TSK_IMG_TYPE_RAW, 0);
     if (!img) { WARN("Raw test image not found, skipping"); return; }
     TSK_FS_INFO *fs = tsk_fs_open_img(img, 0, TSK_FS_TYPE_NTFS);
     if (!fs) { tsk_img_close(img); WARN("Could not open non-Unix FS, skipping"); return; }
