@@ -1031,9 +1031,9 @@ ntfs_dir_open_meta(
         // Taking 128 MiB as an arbitrary upper bound
         if (fs_attr_idx->nrd.allocsize > (128 * 1024 * 1024)) {
             tsk_error_reset();
-           tsk_error_set_errno(TSK_ERR_FS_INODE_COR);
-           tsk_error_set_errstr
-               ("fs_attr_idx->nrd.allocsize value out of bounds");
+            tsk_error_set_errno(TSK_ERR_FS_LARGE_DIR_ERROR);
+            tsk_error_set_errstr("ntfs_dir_open_meta: fs_attr_idx->nrd.allocsize value out of bounds (addr: %" PRIuINUM", fs offset: %" PRIdOFF ")", a_addr, a_fs->offset);
+            return TSK_COR;
            return TSK_COR;
         }
 
