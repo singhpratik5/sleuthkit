@@ -1057,11 +1057,7 @@ GENERATE_HTML          = YES
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
 # NOTE: This is updated by the release-unix.pl script
-<<<<<<< HEAD
-HTML_OUTPUT = jni-docs/4.13.0/
-=======
-HTML_OUTPUT = jni-docs/4.14.0/
->>>>>>> develop-4.14
+HTML_OUTPUT = jni-docs/4.15.0-dev/
 
 # The HTML_FILE_EXTENSION tag can be used to specify the file extension for each
 # generated HTML page (for example: .htm, .php, .asp).
