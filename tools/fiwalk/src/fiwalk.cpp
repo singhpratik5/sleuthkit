@@ -62,86 +62,6 @@
 /* Individual 'state' variables */
 string  plugin_filename;
 
-<<<<<<< HEAD
-=======
-void print_version()
-{
-    printf("SleuthKit Version: %s\n",tsk_version_get_str());
-#ifdef HAVE_LIBAFFLIB
-    printf("AFFLIB Version:    %s\n",af_version());
-#else
-    printf("*** NO AFFLIB SUPPORT ***\n");
-#endif
-#ifdef HAVE_LIBEWF
-    printf("LIBEWF Version:    %s\n",libewf_get_version());
-#else
-    printf("*** NO LIBEWF SUPPORT ***\n");
-#endif
-
-}
-
-void usage()
-{
-    printf("usage: fiwalk [options] iso-name\n");
-    printf("Default behavior: Just print the file system statistics and exit.\n");
-    printf("options:\n");
-    printf("    -c config.txt   read config.txt for metadata extraction tools\n");
-    printf("    -C nn           only process nn files, then do a clean exit\n");
-
-    printf("\n");
-    printf("include/exclude parameters; may be repeated. \n");
-    printf("    -n pattern  = only match files for which the filename matches\n");
-    printf("                  the pattern.\n");
-    printf("              example: -n .jpeg -n .jpg will find all JPEG files\n");
-    printf("              Case is ignored. Will not match orphan files.\n");
-    printf("    ");
-    printf("\n");
-    printf("Ways to make this program run faster:\n");
-    printf("    -I ignore NTFS system files\n");
-    printf("    -g just report the file objects - don't get the data\n");
-    printf("    -O only walk allocated files\n");
-    printf("    -b do not report byte runs if data not accessed\n");
-    printf("    -z do not calculate MD5 or SHA1 values\n");
-    printf("    -Gnn - Only process the contents of files smaller than nn gigabytes (default %d)\n",
-	   opt_maxgig);
-    printf("           (Specify -G0 to remove space restrictions)\n");
-
-    printf("\n");
-    printf("Ways to make this program run slower:\n");
-    printf("    -M = Report MD5 for each file (default on)\n");
-    printf("    -1 = Report SHA1 for each file (default on)\n");
-    printf("    -S nnnn = Perform sector hashes every nnnn bytes\n");
-#ifdef HAVE_LIBMAGIC
-    printf("    -f = Enable LIBMAGIC (disabled by default)");
-#else
-    printf("    -f = Report the output of the 'file' command for each\n");
-#endif
-    //printf("Full content options:\n");
-    //printf("    -s <dir> = Save all recovered files to <dir>\n");
-    printf("\n");
-    printf("Output options:\n");
-    printf("    -m = Output in SleuthKit 'Body file' format\n");
-    printf("    -A<file> = ARFF output to <file>\n");
-    printf("    -X<file> = XML output to a <file> (full DTD)\n");
-    printf("         -X0 = Write output to filename.xml\n");
-    printf("    -Z       = zap (erase) the output file\n");
-    printf("    -x       = XML output to stdout (no DTD)\n");
-    printf("    -T<file> = Walkfile output to <file>\n");
-    printf("    -a <audit.txt> = Read the scalpel audit.txt file\n");
-    printf("\n");
-//Bringing this back with dfxml later
-//    printf("Sector hash:\n");
-//    printf("    -E             = Print sector hashes\n");
-//    printf("    -Snnn          = Specify sector hash size; default is %d\n",sectorhash_size);
-
-    printf("Misc:\n");
-    printf("    -d = debug this program\n");
-    printf("    -v = Enable SleuthKit verbose flag\n");
-    printf("\n");
-    print_version();
-    exit(1);
-}
->>>>>>> develop-4.14
 
 /****************************************************************
  ** Support routines
@@ -205,7 +125,7 @@ void fiwalk::partition_info(const string &name,const string &value)
 void fiwalk::partition_info(const string &name,long i)
 {
     char buf[1024];
-    snprintf(buf,sizeof(buf), "%ld",i);
+    snprintf(buf,sizeof(buf),"%ld",i);
     partition_info(name,buf,fw_empty);
 }
 
@@ -231,6 +151,17 @@ void fiwalk::file_info_xml(const string &name,const string &value)
 }
 
 void fiwalk::file_info_xml2(const string &name,const string &attrib,const string &value)
+{
+    if(x){
+	x->push(name,attrib);
+	x->puts(value);
+	x->pop();
+    }
+}
+
+
+/* Process a string value */
+void fiwalk::file_info(const string &name,const string &value)
 {
     if(a) a->add_value(name,value);
     if(t && !opt_body_file) fputs(cstr(name + ": " + value + "\n"),t);
@@ -291,6 +222,7 @@ void fiwalk::file_infot(const string name,time_t t0, TSK_FS_TYPE_ENUM ftype)
         tm_format="%FT%TZ";
 #endif
     }
+
     if(a) a->add_valuet(name,t0);
 //	struct tm *temp_time = gmtime(&t0);
     if(x){
@@ -389,142 +321,10 @@ int af_display_as_hex(const char *segname)
 
 int fiwalk::run()
 {
-		char *opt_arg=*_opt_arg;
-		char *temp = NULL;
-		int arg_len = TSTRLEN(OPTARG);
-		int ret_val = 0;
-
-		opt_arg=(char *)tsk_malloc(TSTRLEN(OPTARG)+2);
-		temp=opt_arg;
-		ret_val =
-			tsk_UTF16toUTF8(TSK_LIT_ENDIAN,
-			(const UTF16 **) &OPTARG, (UTF16 *)(OPTARG+arg_len+1),
-			(UTF8 **)&temp, (UTF8 *)(temp+arg_len+2), TSKlenientConversion);
-		if (ret_val)
-		{
-			printf("Conversion Error ret_val: %d\n", ret_val);
-			return ret_val;
-		}
-		*_opt_arg=opt_arg;
-		printf("opt_arg: %s\n",opt_arg);
-		return 0;
-}
-#endif
-
-int main(int argc, char * const *argv1)
-{
-    int ch;
-    const char *arff_fn = 0;
-    const char *text_fn = 0;
-    string *xml_fn = 0;
-    const char *audit_file = 0;
-    bool opt_x = false;
-    string command_line = xml::make_command_line(argc,argv1);
-    bool opt_zap = false;
-    u_int sector_size=512;			// defaults to 512; may be changed by AFF
-
-    struct timeval tv0;
-    struct timeval tv1;
     gettimeofday(&tv0,0);
-
-    TSK_TCHAR * const *argv;
-
-#ifdef TSK_WIN32
-	char *opt_arg = NULL;
-	char *argv_0 = NULL;
-
-
-	argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-	if (argv == NULL) {
-		fprintf(stderr,"Error getting wide arguments\n");
-		exit(1);
-	}
-#else
-	argv = (TSK_TCHAR * const*) argv1;
-#endif
-
-    while ((ch = GETOPT(argc, argv, _TSK_T("A:a:C:dfG:gmv1IMX:S:T:VZn:c:b:xOzh?"))) > 0 ) { // s: removed
-	switch (ch) {
-	case _TSK_T('1'): opt_sha1 = true;break;
-	case _TSK_T('m'):
-	    opt_body_file = 1;
-	    opt_sha1 = 0;
-	    opt_md5  = 1;
-	    t = stdout;
-	    break;
-	case _TSK_T('A'):
-#ifdef TSK_WIN32
-		convert(OPTARG, &opt_arg);
-		arff_fn = opt_arg;
-#else
-		arff_fn = OPTARG;
-#endif
-		break;
-	case _TSK_T('C'): file_count_max = TATOI(OPTARG);break;
-	case _TSK_T('d'): opt_debug++; break;
-	case _TSK_T('f'): opt_magic = true;break;
-	case _TSK_T('g'): opt_no_data = true; break;
-  case _TSK_T('b'): opt_get_fragments = false; break;
-	case _TSK_T('G'): opt_maxgig = TATOI(OPTARG);break;
-	case _TSK_T('h'): usage(); break;
-	case _TSK_T('I'): opt_ignore_ntfs_system_files=true;break;
-	case _TSK_T('M'): opt_md5 = true;
-	case _TSK_T('O'): opt_allocated_only=true; break;
-	case _TSK_T('S'):
-            opt_sector_hash = true;
-            sectorhash_size = TATOI(OPTARG); break;
-	case _TSK_T('T'):
-#ifdef TSK_WIN32
-		convert(OPTARG, &opt_arg);
-		text_fn = opt_arg;
-#else
-		text_fn = OPTARG;
-#endif
-		break;
-	case _TSK_T('V'): print_version();exit(0);
-	case _TSK_T('X'):
-#ifdef TSK_WIN32
-		convert(OPTARG, &opt_arg);
-		xml_fn = new string(opt_arg);
-#else
-		xml_fn = new string(OPTARG);
-#endif
-		break;
-	case _TSK_T('x'): opt_x = true;break;
-	case _TSK_T('Z'): opt_zap = true;break;
-	case _TSK_T('a'):
-#ifdef TSK_WIN32
-		convert(OPTARG, &opt_arg);
-		audit_file = opt_arg;
-#else
-		audit_file = OPTARG;
-#endif
-		break;
-	case _TSK_T('c'):
-#ifdef TSK_WIN32
-		convert(OPTARG, &opt_arg);
-		config_file = opt_arg;
-#else
-		config_file = OPTARG;
-#endif
-		break;
-	case _TSK_T('n'):
-
-#ifdef TSK_WIN32
-		convert(OPTARG, &opt_arg);
-		namelist.push_back(opt_arg);
-#else
-		namelist.push_back(OPTARG);
-#endif
-		break;
-	    //case 's': save_outdir = optarg; opt_save = true; break;
-	case _TSK_T('v'): tsk_verbose++; break; 			// sleuthkit option
-	case _TSK_T('z'): opt_sha1=false;opt_md5=false;break;
-	case _TSK_T('?'): usage();break;
-	default:
-	    fprintf(stderr, "Invalid argument: %s\n", argv[OPTIND]);
-	    usage();
-	}
+    std::ofstream xout;
+    if (opt_no_data && (opt_md5 || opt_sha1 || opt_save || opt_magic)) {
+        errx(1, "-g conflicts with options requiring data access (-z may be needed)");
     }
 
     if (opt_save){
@@ -617,18 +417,19 @@ int main(int argc, char * const *argv1)
 
     /* output per-run metadata for XML output */
     if (x){
-	/* Output Dublin Core information */
-	x->push("dfxml",
-		"\n  xmlns='http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML'"
-		"\n  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'"
-		"\n  xmlns:dc='http://purl.org/dc/elements/1.1/'"
-		"\n  version='1.0'" );
-	x->push("metadata", "");
-	x->xmlout("dc:type","Disk Image",fw_empty,false);
-	x->pop();
+        /* Output Dublin Core information */
+        x->push("dfxml",
+                "\n  xmlns='http://www.forensicswiki.org/wiki/Category:Digital_Forensics_XML'"
+                "\n  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'"
+                "\n  xmlns:dc='http://purl.org/dc/elements/1.1/'"
+                "\n  version='1.1.0+'" );
+        x->push("metadata", "");
+        x->xmlout("dc:type","Disk Image",fw_empty,false);
+        x->pop();
 
-	/* Output carver information per photorec standard */
-	x->add_DFXML_creator("fiwalk",tsk_version_get_str(),command_line);
+        if (opt_variable) {
+            x->add_DFXML_creator("fiwalk",tsk_version_get_str(),command_line);
+        }
     }
 
     /* Can't use comment until after here... */

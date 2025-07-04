@@ -1171,8 +1171,12 @@ TSK_RETVAL_ENUM TskAutoDb::addFsInfoUnalloc(const TSK_IMG_INFO*  curImgInfo, con
     }
 
     //open the fs we have from database
-    TSK_FS_INFO * fsInfo = tsk_fs_open_img_decrypt(m_img_info, dbFsInfo.imgOffset, dbFsInfo.fType, getFileSystemPassword().data());
-    if (fsInfo == NULL) {
+    std::unique_ptr<TSK_FS_INFO, decltype(&tsk_fs_close)> fsInfo{
+        tsk_fs_open_img_decrypt((TSK_IMG_INFO*)curImgInfo, dbFsInfo.imgOffset, dbFsInfo.fType, getFileSystemPassword().data()),
+        tsk_fs_close
+    };
+
+    if (!fsInfo) {
         tsk_error_set_errstr2("TskAutoDb::addFsInfoUnalloc: error opening fs at offset %" PRIdOFF, dbFsInfo.imgOffset);
         registerError();
         return TSK_ERR;

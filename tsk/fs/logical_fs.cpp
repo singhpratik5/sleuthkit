@@ -607,7 +607,6 @@ static TSK_RETVAL_ENUM
 find_closest_sibling_match_in_cache(LOGICALFS_INFO* logical_fs_info, const TSK_TCHAR* target_path, const TSK_TCHAR* parent_path, TSK_INUM_T parent_inum, TSK_TCHAR** best_name, TSK_INUM_T* best_inum) {
 	TSK_IMG_INFO* img_info = logical_fs_info->fs_info.img_info;
 	IMG_LOGICAL_INFO* logical_img_info = (IMG_LOGICAL_INFO*)img_info;
-	tsk_take_lock(&(img_info->cache_lock));
 
 	*best_inum = LOGICAL_INVALID_INUM;
 	*best_name = NULL;
@@ -649,19 +648,16 @@ find_closest_sibling_match_in_cache(LOGICALFS_INFO* logical_fs_info, const TSK_T
 				tsk_fprintf(stderr, "find_closest_sibling_match_in_cache: get_end_of_path returned null for child: %" PRIttocTSK " parent: %" PRIttocTSK "\n",
 					logical_img_info->inum_cache[best_match_index].path, parent_path);
 			}
-			tsk_release_lock(&(img_info->cache_lock));
 			return TSK_ERR;
 		}
 		*best_name = (TSK_TCHAR*)tsk_malloc(sizeof(TSK_TCHAR) * (TSTRLEN(name) + 1));
 		if (*best_name == NULL) {
-			tsk_release_lock(&(img_info->cache_lock));
 			return TSK_ERR;
 		}
 		TSTRNCPY(*best_name, name, TSTRLEN(name) + 1);
 		*best_inum = logical_img_info->inum_cache[best_match_index].inum;
 	}
 
-	tsk_release_lock(&(img_info->cache_lock));
 	return TSK_OK;
 }
 
@@ -751,7 +747,6 @@ add_directory_to_cache(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR *path, T
 			if (always_cache && logical_img_info->inum_cache[i].cache_age < LOGICAL_INUM_CACHE_MAX_AGE) {
 				logical_img_info->inum_cache[i].cache_age = LOGICAL_INUM_CACHE_MAX_AGE;
 			}
-			tsk_release_lock(&(img_info->cache_lock));
 			return TSK_OK;
 		}
 	}
@@ -774,7 +769,6 @@ add_directory_to_cache(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR *path, T
 
 	// If the always_cache flag is not set, only continue if we've found an empty space
 	if (!always_cache && logical_img_info->inum_cache[next_slot].inum != LOGICAL_INVALID_INUM) {
-		tsk_release_lock(&(img_info->cache_lock)); // added in develop-4.14
 		return TSK_OK;
 	}
 	clear_inum_cache_entry(logical_img_info, next_slot);
@@ -792,7 +786,6 @@ add_directory_to_cache(LOGICALFS_INFO *logical_fs_info, const TSK_TCHAR *path, T
 		// We want to remove the random folders first when we run out of space
 		logical_img_info->inum_cache[next_slot].cache_age = LOGICAL_INUM_CACHE_MAX_AGE / 2;
 	}
-	tsk_release_lock(&(img_info->cache_lock)); // added in develop-4.14
 	return TSK_OK;
 }
 

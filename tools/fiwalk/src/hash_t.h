@@ -57,8 +57,8 @@
  */
 class md5_ {
 public:
-    static const size_t SIZE=16;
-    uint8_t digest[SIZE];
+  static const size_t SIZE = 16;
+  uint8_t digest[SIZE];
 };
 
 class sha1_ {
@@ -79,30 +79,14 @@ public:
   uint8_t digest[SIZE];
 };
 
-template<typename T>
-class hash__:public T
-{
-    static uint8_t hexcharval(char v){
-        switch(v){
-        case '0': return 0;
-        case '1': return 1;
-        case '2': return 2;
-        case '3': return 3;
-        case '4': return 4;
-        case '5': return 5;
-        case '6': return 6;
-        case '7': return 7;
-        case '8': return 8;
-        case '9': return 9;
-        case 'a': case 'A': return 0x0a;
-        case 'b': case 'B': return 0x0b;
-        case 'c': case 'C': return 0x0c;
-        case 'd': case 'D': return 0x0d;
-        case 'e': case 'E': return 0x0e;
-        case 'f': case 'F': return 0x0f;
-        };
-        return 0;
-    }
+template<
+  class CTX,
+  void(*INIT)(CTX*),
+  void(*UPDATE)(CTX*, const unsigned char*, unsigned int),
+  void(*FINALIZE)(CTX*, unsigned char*),
+  class H
+>
+class legacy_hasher {
 public:
   using hash_t = H;
 
@@ -260,7 +244,6 @@ public:
       bits += 8;
       binbuf_size -= 1;
     }
-<<<<<<< HEAD
     return bits;
   }
 
@@ -269,63 +252,6 @@ public:
     if (hex2bin(val->digest, sizeof(val->digest), hex) != val->SIZE*8) {
       std::cerr << "invalid input " << hex << "(" << val->SIZE*8 << ")\n";
       exit(1);
-=======
-    const uint8_t *final() const {
-	return this->digest;
-    }
-    /* python like interface for hexdigest */
-    const char *hexdigest(char *hexbuf,size_t bufsize) const {
-	const char *hexbuf_start = hexbuf;
-	for(unsigned int i=0;i<this->SIZE && bufsize>=3;i++){
-	    snprintf(hexbuf,bufsize,"%02x",this->digest[i]);
-	    hexbuf  += 2;
-	    bufsize -= 2;
-	}
-	return hexbuf_start;
-    }
-    std::string hexdigest() const {
-      char *buf = (char *)calloc(this->SIZE*2+1,1);
-	auto ret = std::string(hexdigest(buf,sizeof(buf)));
-	free(buf);
-	return ret;
-    }
-    /**
-     * Convert a hex representation to binary, and return
-     * the number of bits converted.
-     * @param binbuf output buffer
-     * @param binbuf_size size of output buffer in bytes.
-     * @param hex    input buffer (in hex)
-     * @return the number of converted bits.
-     */
-    static int hex2bin(uint8_t *binbuf,size_t binbuf_size,const char *hex)
-    {
-	int bits = 0;
-	while(hex[0] && hex[1] && binbuf_size>0){
-	    *binbuf++ = (hexcharval(hex[0])<<4) | hexcharval(hex[1]);
-	    hex  += 2;
-	    bits += 8;
-	    binbuf_size -= 1;
-	}
-	return bits;
-    }
-    static const hash__ *new_from_hex(const char *hex) {
-	hash__ *val = new hash__();
-	if(hex2bin(val->digest,sizeof(val->digest),hex)!=val->SIZE*8){
-	    std::cerr << "invalid input " << hex << "(" << val->SIZE*8 << ")\n";
-	    exit(1);
-	}
-	return val;
-    }
-    bool operator<(const hash__ &s2) const {
-	/* Check the first byte manually as a performance hack */
-	if(this->digest[0] < s2.digest[0]) return true;
-	if(this->digest[0] > s2.digest[0]) return false;
-	return memcmp(this->digest,s2.digest, this->SIZE) < 0;
-    }
-    bool operator==(const hash__ &s2) const {
-	if(this->digest[0] != s2.digest[0]) return false;
-	return memcmp(this->digest,s2.digest, this->SIZE) == 0;
->>>>>>> develop-4.14
     }
     return val;
   }
@@ -349,61 +275,22 @@ typedef hash__<sha256_> sha256_t;
 typedef hash__<sha512_> sha512_t;
 
 template<typename T>
-class hash_generator__:T { 			/* generates the hash */
-    unsigned int ret;
-	void *mdctx;
-	unsigned char *md;
-	int (*md_init)(void *);
-	int (*md_update)(void *, const void *, uint32_t);
-	int (*md_final)(unsigned char *, void *);
-    bool initialized;	       /* has the context been initialized? */
-    bool finalized;
-    /* Static function to determine if something is zero */
-    static bool iszero(const uint8_t *buf,size_t bufsize){
-	for(unsigned int i=0;i<bufsize;i++){
-	    if(buf[i]!=0) return false;
-	}
-	return true;
-    }
+class hash_generator__: T {       /* generates the hash */
+private:
+  bool initialized;         /* has the context been initialized? */
+  bool finalized;
+
 public:
-    int64_t hashed_bytes;
-    hash_generator__():initialized(false),finalized(false),hashed_bytes(0){
-	switch(this->SIZE){
-	case 16:
-		mdctx = malloc(sizeof(TSK_MD5_CTX));
-		memset(mdctx,0,sizeof(TSK_MD5_CTX));
-		md=(unsigned char *)malloc(TSK_MD5_DIGEST_LENGTH);
-		memset(md,0,TSK_MD5_DIGEST_LENGTH);
-		md_init	 	= (int(*)(void *))&TSK_MD5_Init;
-    	md_update	= (int (*)(void *, const void *, uint32_t))&TSK_MD5_Update;
-		md_final	= (int (*)(unsigned char*, void *))&TSK_MD5_Final;
-		break;
-	case 20:
-		mdctx = malloc(sizeof(TSK_SHA_CTX));
-		memset(mdctx,0,sizeof(TSK_SHA_CTX));
-		md=(unsigned char *)malloc(TSK_SHA_DIGEST_LENGTH);
-		memset(md,0,TSK_SHA_DIGEST_LENGTH);
-		md_init		= (int(*)(void *))&TSK_SHA_Init;
-		md_update	= (int (*)(void *, const void *, uint32_t))(void (*)())&TSK_SHA_Update;
-		md_final	= (int (*)(unsigned char*, void*))&TSK_SHA_Final;
-		break;
-	case 32:
-		mdctx = malloc(sizeof(SHA256_CTX));
-		md=(unsigned char *)malloc(SHA256_DIGEST_LENGTH);
-		md_init		= (int(*)(void *))&SHA256_Init;
-		md_update	= (int (*)(void *, const void *, uint32_t))(void (*)())&SHA256_Update;
-		md_final	= (int (*)(unsigned char*, void*))&SHA256_Final;
-		break;
-	case 64:
-		mdctx = malloc(sizeof(SHA512_CTX));
-		md=(unsigned char *)malloc(SHA512_DIGEST_LENGTH);
-		md_init		= (int(*)(void *))&SHA512_Init;
-		md_update	= (int (*)(void *, const void *, uint32_t))(void (*)())&SHA512_Update;
-		md_final	= (int (*)(unsigned char*, void*))&SHA512_Final;
-		break;
-	default:
-	    assert(0);
-	}
+  int64_t hashed_bytes;
+
+  hash_generator__(): initialized(false), finalized(false), hashed_bytes(0) {}
+
+  void init() {
+    if (initialized == false) {
+      T::init();
+      initialized = true;
+      finalized = false;
+      hashed_bytes = 0;
     }
   }
 
@@ -427,13 +314,19 @@ public:
       init();      /* do it now! */
     }
 
-    /** Compute a sha1 from a buffer and return the hash */
-    static hash__<T>  hash_buf(const uint8_t *buf,size_t bufsize){
-	/* First time through find the SHA1 of 512 NULLs */
-	hash_generator__ g;
-	g.update(buf,bufsize);
-	return g.final();
-    }
+    hash__<typename T::hash_t> val;
+    T::finalize(val.digest);
+    finalized = true;
+    return val;
+  }
+
+  /** Compute a sha1 from a buffer and return the hash */
+  static hash__<T>  hash_buf(const uint8_t *buf, size_t bufsize) {
+    /* First time through find the SHA1 of 512 NULLs */
+    hash_generator__ g;
+    g.update(buf, bufsize);
+    return g.finalize();
+  }
 
 #ifdef HAVE_MMAP
   /** Static method allocator */
