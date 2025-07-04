@@ -1,6 +1,8 @@
-[![Build Status](https://travis-ci.org/sleuthkit/sleuthkit.svg?branch=develop)](https://travis-ci.org/sleuthkit/sleuthkit)
+[![codecov](https://codecov.io/github/sleuthkit/sleuthkit/branch/develop/graph/badge.svg?token=pfFlgpWdCt)](https://codecov.io/github/sleuthkit/sleuthkit)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/8f7ljj8s2lh5sqfv?svg=true)](https://ci.appveyor.com/project/bcarrier/sleuthkit)
+[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/8f7ljj8s2lh5sqfv?svg=true)](https://ci.appveyor.com/project/bcarrier/sleuthkit)
+
+[![Github Build Status](https://github.com/sleuthkit/sleuthkit/actions/workflows/build-unix.yml/badge.svg?branch=develop)]
 
 # [The Sleuth Kit](http://www.sleuthkit.org/sleuthkit)
 
@@ -145,6 +147,17 @@ The categories are based on rule sets in configuration files.  The
 'sorter' tool will also use hash databases to flag known bad files
 and ignore known good files.  Refer to the [wiki/sorter](http://wiki.sleuthkit.org/index.php?title=Sorter)
 file for more details.
+
+
+## TESTING
+Both unit and end-to-end tests are located in the [test](test/) directory. Small and legacy disk images are located in [test/data](test/data/). Some tests require disk images that are include in the [Github repository](https://github.com/sleuthkit/sleuthkit_test_data); large disk images are distributed as compressed (.E01) images using [git's extensions for large objects](https://git-lfs.com/).  By default, this repo resides at [../sleuthkit_test_data](../sleuthkit_test_data]. However, it can be installed elsewhere by setting the environment variable `SLEUTHKIT_TEST_DATA_DIR`.
+
+If the disk images are not present, tests requiring the disk images will generate a warning but not an error.
+
+- Tests can be run by typing `make check`.
+
+- Tests can be run on a new distribution by typing `make distcheck`.
+
 
 
 ## LICENSE

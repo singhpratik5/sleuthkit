@@ -14,11 +14,13 @@
 
 #include "tsk/img/pool.hpp"
 #include "tsk/img/tsk_img_i.h"
+#include "tsk/img/legacy_cache.h"
 
+#include <memory>
 #include <stdexcept>
 
 /**
- * Get error string from libvslvm and make buffer empty if that didn't work. 
+ * Get error string from libvslvm and make buffer empty if that didn't work.
  * @returns 1 if error message was not set
  */
 static uint8_t getError(libvslvm_error_t *vslvm_error, char error_string[512])
@@ -26,6 +28,53 @@ static uint8_t getError(libvslvm_error_t *vslvm_error, char error_string[512])
     error_string[0] = '\0';
     int retval = libvslvm_error_backtrace_sprint(vslvm_error, error_string, 512);
     return retval <= 0;
+}
+
+LVMPoolCompat::~LVMPoolCompat() {
+  // Clean up the dynamic allocations
+  if (_info.vol_list != nullptr) {
+    auto vol = _info.vol_list;
+    while (vol != nullptr) {
+      if (vol->desc != nullptr) delete[] vol->desc;
+      vol = vol->next;
+    }
+    delete[] _info.vol_list;
+    _info.vol_list = nullptr;
+  }
+}
+
+// Note that vol_list is used by findFilesInPool
+void LVMPoolCompat::init_volumes() {
+    int number_of_logical_volumes = 0;
+    if (libvslvm_volume_group_get_number_of_logical_volumes(_lvm_volume_group, &number_of_logical_volumes, NULL) != 1 ) {
+        return;
+    }
+    _info.num_vols = number_of_logical_volumes;
+    _info.vol_list = new TSK_POOL_VOLUME_INFO[number_of_logical_volumes]();
+
+    libvslvm_logical_volume_t *lvm_logical_volume = NULL;
+    TSK_POOL_VOLUME_INFO *last = nullptr;
+
+    for (int volume_index = 0; volume_index < number_of_logical_volumes; volume_index++ ) {
+        if (libvslvm_volume_group_get_logical_volume(_lvm_volume_group, volume_index, &lvm_logical_volume, NULL) != 1 ) {
+            return;
+        }
+        auto &vinfo = _info.vol_list[volume_index];
+
+        vinfo.tag = TSK_POOL_VOL_INFO_TAG;
+        vinfo.index = volume_index;
+        vinfo.block = volume_index + 1;
+        vinfo.prev = last;
+        if (vinfo.prev != nullptr) {
+            vinfo.prev->next = &vinfo;
+        }
+        vinfo.desc = new char[64];
+        libvslvm_logical_volume_get_name(lvm_logical_volume, vinfo.desc, 64, NULL);
+
+        libvslvm_logical_volume_free(&lvm_logical_volume, NULL);
+
+        last = &vinfo;
+    }
 }
 
 uint8_t LVMPoolCompat::poolstat(FILE *hFile) const noexcept try {
@@ -76,8 +125,6 @@ lvm_logical_volume_img_close(TSK_IMG_INFO * img_info)
     if (img_info != NULL) {
         IMG_POOL_INFO *pool_img_info = (IMG_POOL_INFO *)img_info;
         libvslvm_logical_volume_free((libvslvm_logical_volume_t **) &( pool_img_info->impl ), NULL);
-
-        tsk_deinit_lock(&(img_info->cache_lock));
         tsk_img_free(img_info);
     }
 }
@@ -98,8 +145,6 @@ lvm_logical_volume_img_read(TSK_IMG_INFO * img_info, TSK_OFF_T offset, char *buf
     IMG_POOL_INFO *pool_img_info = (IMG_POOL_INFO *)img_info;
     libvslvm_error_t *vslvm_error = NULL;
 
-    // correct the offset to be relative to the start of the logical volume
-    offset -= pool_img_info->pool_info->img_offset;
 
     if (tsk_verbose) {
         tsk_fprintf(stderr, "lvm_logical_volume_img_read: offset: %" PRIdOFF " read len: %" PRIuSIZE ".\n",
@@ -120,53 +165,61 @@ lvm_logical_volume_img_read(TSK_IMG_INFO * img_info, TSK_OFF_T offset, char *buf
 
 TSK_IMG_INFO * LVMPoolCompat::getImageInfo(const TSK_POOL_INFO *pool_info, TSK_DADDR_T pvol_block) noexcept try {
 
-    libvslvm_logical_volume_t *lvm_logical_volume = NULL;
+    libvslvm_logical_volume_t *lvm_logical_volume = nullptr;
 
     // pvol_block contians the logical volume index + 1
-    if (libvslvm_volume_group_get_logical_volume(_lvm_volume_group, pvol_block - 1, &lvm_logical_volume, NULL) != 1 ) {
-        return NULL;
+    if (libvslvm_volume_group_get_logical_volume(_lvm_volume_group, pvol_block - 1, &lvm_logical_volume, nullptr) != 1 ) {
+        return nullptr;
     }
     uint64_t logical_volume_size = 0;
 
-    if (libvslvm_logical_volume_get_size(lvm_logical_volume, &logical_volume_size, NULL) != 1 ) {
-        return NULL;
+    if (libvslvm_logical_volume_get_size(lvm_logical_volume, &logical_volume_size, nullptr) != 1 ) {
+        return nullptr;
     }
-    IMG_POOL_INFO *img_pool_info = (IMG_POOL_INFO *)tsk_img_malloc(sizeof(IMG_POOL_INFO));
 
-    if (img_pool_info == NULL) {
-        return NULL;
+    const auto deleter = [](IMG_POOL_INFO* img_pool_info) {
+        tsk_img_free(img_pool_info);
+    };
+
+    std::unique_ptr<IMG_POOL_INFO, decltype(deleter)> img_pool_info{
+        (IMG_POOL_INFO *) tsk_img_malloc(sizeof(IMG_POOL_INFO)),
+        deleter
+    };
+
+    if (!img_pool_info) {
+        return nullptr;
     }
+
+    TSK_IMG_INFO *img_info = (TSK_IMG_INFO *) img_pool_info.get();
+
+    img_info->tag = TSK_IMG_INFO_TAG;
+    img_info->itype = TSK_IMG_TYPE_POOL;
+
     img_pool_info->pool_info = pool_info;
     img_pool_info->pvol_block = pvol_block;
 
     img_pool_info->img_info.read = lvm_logical_volume_img_read;
     img_pool_info->img_info.close = lvm_logical_volume_img_close;
     img_pool_info->img_info.imgstat = lvm_logical_volume_img_imgstat;
+    img_pool_info->img_info.cache = new LegacyCache();
 
     img_pool_info->impl = (void *) lvm_logical_volume;
 
-    TSK_IMG_INFO *img_info = (TSK_IMG_INFO *)img_pool_info;
-
-    img_info->tag = TSK_IMG_INFO_TAG;
-    img_info->itype = TSK_IMG_TYPE_POOL;
-
     // Copy original info from the first TSK_IMG_INFO. There was a check in the
     // LVMPool that _members has only one entry.
-    IMG_POOL_INFO *pool_img_info = (IMG_POOL_INFO *)img_info;
-    const auto pool = static_cast<LVMPoolCompat*>(pool_img_info->pool_info->impl);
+    const auto pool = static_cast<LVMPoolCompat*>(img_pool_info->impl);
     TSK_IMG_INFO *origInfo = pool->_members[0].first;
 
     img_info->size = logical_volume_size;
-    img_info->num_img = origInfo->num_img;
     img_info->sector_size = origInfo->sector_size;
     img_info->page_size = origInfo->page_size;
     img_info->spare_size = origInfo->spare_size;
-    img_info->images = origInfo->images;
 
-    tsk_init_lock(&(img_info->cache_lock));
+    if (!tsk_img_copy_image_names(img_info, origInfo->images, origInfo->num_img)) {
+        return nullptr;
+    }
 
-    return img_info;
-
+    return (TSK_IMG_INFO*) img_pool_info.release();
 }
 catch (const std::exception &e) {
     tsk_error_reset();
@@ -176,4 +229,3 @@ catch (const std::exception &e) {
 }
 
 #endif /* HAVE_LIBVSLVM */
-
