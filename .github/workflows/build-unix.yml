@@ -8,15 +8,17 @@ on:
     branches:
       - main
       - develop
+      - develop-4.14
   pull_request:
     branches:
       - main
       - develop
+      - develop-4.14
 
 jobs:
   build:
     timeout-minutes: 30
-    name: ${{matrix.prefix}} ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.linkage }} ${{ matrix.compiler }} ${{ matrix.suffix }}
+    name: posix ${{matrix.prefix}} ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.linkage }} ${{ matrix.compiler }} ${{ matrix.suffix }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -158,11 +160,15 @@ jobs:
           echo "CPPFLAGS=$CPPFLAGS" >> $GITHUB_ENV
           echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
 
-      - name: Install Linux packages
+      - name: Install Ubuntu Linux packages
         if: ${{ matrix.os == 'linux' }}
         run: |
           sudo apt update
           sudo apt install -y ant autoconf automake g++ libssl-dev afflib-tools libewf-dev libqcow-dev libvhdi-dev libvmdk-dev libmagic-dev libtool make pkg-config zlib1g-dev wget
+          echo ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer >> $GITHUB_ENV
+          echo ASAN_OPTIONS="symbolize=1:abort_on_error=1" >> $GITHUB_ENV
+
+
 
       - name: Install Mingw packages and setup for cross-compiling
         if: ${{ matrix.os == 'mingw' }}
@@ -198,22 +204,53 @@ jobs:
         run: |
           cd ..
           pwd
-          wget https://digitalcorpora.s3.amazonaws.com/corpora/drives/tsk-2024/sleuthkit_test_data.zip
+          wget  -q https://digitalcorpora.s3.amazonaws.com/corpora/drives/tsk-2024/sleuthkit_test_data.zip
           unzip sleuthkit_test_data.zip
           cd sleuthkit_test_data
           make unpack
           find . -ls | grep -v '[.]git'
           echo "SLEUTHKIT_TEST_DATA_DIR=$(pwd)" >> $GITHUB_ENV
 
-      - name: Run make
-        run: |
-          make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 TESTS=
-
       - name: Run make check on Mac/Linux
         if: ${{ matrix.os != 'mingw' }}
         run: |
           echo SLEUTHKIT_TEST_DATA_DIR=$SLEUTHKIT_TEST_DATA_DIR
           make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
+
+      - name: Run make check on Linux (trap failure)
+        if: ${{ matrix.os == 'linux' }}
+        run: |
+          ulimit -c unlimited
+          bash -c '
+            make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1
+          '
+          RESULT=$?
+          echo "make check exit code: $RESULT"
+          if [ $RESULT -ne 0 ]; then
+            echo "TEST_FAILED=1" >> $GITHUB_ENV
+          fi
+
+      - name: Show core dump backtrace if tests failed
+        if: ${{ env.TEST_FAILED == '1' && matrix.os == 'linux' }}
+        run: |
+          echo "Checking for core dump..."
+          COREFILE=$(find . -type f -name 'core*' | head -n 1)
+          if [ -n "$COREFILE" ]; then
+            echo "Found core file: $COREFILE"
+            BINARY=$(file "$COREFILE" | sed -n "s/.*from '\(.*\)'.*/\1/p")
+            if [ -x "$BINARY" ]; then
+              echo "Running gdb to get backtrace..."
+              gdb -batch -ex "thread apply all bt full" -ex "quit" "$BINARY" "$COREFILE"
+            else
+              echo "Could not identify executable from core file."
+            fi
+          else
+            echo "No core file found."
+          fi
+
+      - name: Fail job if tests failed
+        if: ${{ env.TEST_FAILED == '1' }}
+        run: exit 1
 
       - name: Run make check on Mingw
         if: ${{ matrix.os == 'mingw' }}
@@ -225,9 +262,8 @@ jobs:
           make -j${{ steps.cores.outputs.cores }} check ${{ matrix.make_flags }} VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1 ; for i in $(find test -name '*.log') ; do printf '\n%79s\n' | tr ' ' '=' ; echo "$i" ; cat "$i" ; done ; exit $result
 
       - name: Clean up
-        if: ${{ matrix.os != 'mingw' }}
         run: |
-          make distclean
+          if [ -x Makefile ]; then make distclean ; fi
 
       - name: Run configure with address-sanitizer
         if: ${{ matrix.address_sanitizer == 'yes' }}
@@ -240,31 +276,8 @@ jobs:
           make -j check VERBOSE=1
 
       - name: Clean up
-        if: ${{ matrix.os != 'mingw' }}
         run: |
-          make distclean
-
-      - name: Run configure for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          ./configure ${{ matrix.configure_opts }} CFLAGS='-g -O0 -fprofile-arcs -ftest-coverage' CXXFLAGS='-g -O0 -fprofile-arcs -ftest-coverage'
-
-      - name: Run make for codecov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          make -j check V=0
-
-      - name: run gcov
-        if: ${{ matrix.codecov == 'yes' }}
-        run: |
-          gcov $(find . -name '*.gcda')
-
-      - name: Upload codecov report
-        if: ${{ matrix.codecov == 'yes' }}
-        uses: codecov/codecov-action@v5
-        with:
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
+          if [ -x Makefile ]; then make distclean ; fi
 
       - name: Create any artifacts that we need to keep
         if: ${{ matrix.keep_artifacts == 'yes' }}
@@ -283,10 +296,10 @@ jobs:
             executables/*
           retention-days: 15
 
-#      - name: Run distcheck
-#        run: |
-#          ./configure
-#          make distcheck
+      - name: Run distcheck
+        run: |
+          ./configure
+          make distcheck
 
       - uses: ammaraskar/gcc-problem-matcher@0.2.0
         name: GCC Problem Matcher
