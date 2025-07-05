@@ -192,6 +192,8 @@ tools/*/*/*.exe
 # EMACS backup files
 *~
 
+.dirstamp
+
 # Mac Junk
 .DS_Store
 
@@ -205,3 +207,10 @@ sleuthkit-*.tar.gz
 test-suite.log
 venv
 wget-log
+TAGS
+test/from_brian/
+*.log
+apfs_pool.db
+test/catch_runner
+*.db
+sleuthkit-[4-5]*

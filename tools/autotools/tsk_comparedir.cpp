@@ -14,7 +14,9 @@
 #include <locale.h>
 #include <sys/stat.h>
 #include <errno.h>
+
 #include <set>
+#include <string>
 
 #ifdef WIN32
 #include <windows.h>
@@ -35,19 +37,16 @@ static TSK_TCHAR *progname;
 static void
 usage()
 {
-    TFPRINTF(stderr,
-        _TSK_T
-        ("usage: %" PRIttocTSK " [-f fstype] [-i imgtype] [-b dev_sector_size] [-o sector_offset] [-P pooltype] [-B pool_volume_block] [-n start_inum] [-vV] image [image] comparison_directory\n"),
-        progname);
-
+    tsk_fprintf(stderr,
+        "usage: tsk_comparedir [-f fstype] [-i imgtype] [-b dev_sector_size] [-o sector_offset] [-P pooltype] [-B pool_volume_block] [-n start_inum] [-vV] image [image] comparison_directory\n");
+    tsk_fprintf(stderr,
+        "\t-f fstype: File system type (use '-f list' for supported types)\n");
     tsk_fprintf(stderr,
         "\t-i imgtype: The format of the image file (use '-i list' for supported types)\n");
     tsk_fprintf(stderr,
         "\t-b dev_sector_size: The size (in bytes) of the device sectors\n");
     tsk_fprintf(stderr,
-        "\t-f fstype: The file system type (use '-f list' for supported types)\n");
-    tsk_fprintf(stderr,
-        "\t-o sector_offset: sector offset for file system to compare\n");
+        "\t-o sector_offset: The offset of the file system in the image (in sectors)\n");
     tsk_fprintf(stderr,
         "\t-P pooltype: Pool container type (use '-P list' for supported types)\n");
     tsk_fprintf(stderr,
@@ -162,13 +161,12 @@ uint8_t
     DIR *dp;
     struct dirent *dirp;
     char file[TSK_CD_BUFSIZE];
-    char fullPath[TSK_CD_BUFSIZE];
     struct stat status;
 
-    strncpy(fullPath, m_lclDir, TSK_CD_BUFSIZE-1);
-    strncat(fullPath, a_dir, TSK_CD_BUFSIZE-strlen(fullPath)-1);
+    std::string fullPath(m_lclDir);
+    fullPath += a_dir;
 
-    if ((dp = opendir(fullPath)) == NULL) {
+    if ((dp = opendir(fullPath.c_str())) == NULL) {
         fprintf(stderr, "Error opening directory");
         return 1;
     }
@@ -178,10 +176,10 @@ uint8_t
         strncat(file, "/", TSK_CD_BUFSIZE-strlen(file)-1);
         strncat(file, dirp->d_name, TSK_CD_BUFSIZE-strlen(file)-1);
 
-        strncpy(fullPath, m_lclDir, TSK_CD_BUFSIZE-1);
-        strncat(fullPath, file, TSK_CD_BUFSIZE-strlen(fullPath)-1);
+        fullPath = m_lclDir;
+        fullPath += file;
 
-        stat(fullPath, &status);
+        stat(fullPath.c_str(), &status);
         if (S_ISDIR(status.st_mode)) {
             // skip the '.' and '..' entries
             if ((dirp->d_name[0] == '.') && ((dirp->d_name[1] == '\0') || ((dirp->d_name[1] == '.') && (dirp->d_name[2] == '\0')))) {

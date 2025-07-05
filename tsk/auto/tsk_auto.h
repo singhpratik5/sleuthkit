@@ -61,6 +61,10 @@ typedef enum {
  * internal list. Those can be retrieved with getErrorList().  If you want to deal with errors
  * differently, you must implement handleError().
  */
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverloaded-virtual"
+
 class TskAuto {
   public:
     unsigned int m_tag;
@@ -105,7 +109,12 @@ class TskAuto {
     /**
     * Set a password that will be used when trying to open each file system
     */
-    void setFileSystemPassword(std::string fileSystemPassword) { m_fileSystemPassword = fileSystemPassword; }
+    void setFileSystemPassword(const std::string& fileSystemPassword) { m_fileSystemPassword = fileSystemPassword; }
+
+    /**
+     * @returns A password that will be used when trying to open each file system or empty.
+     */
+    std::string getFileSystemPassword() const { return m_fileSystemPassword; }
 
     /**
      * TskAuto calls this method before it processes the volume system that is found in an
@@ -206,14 +215,14 @@ class TskAuto {
      * the errors or never called addToErrorList().
      * @returns list of errors.
      */
-    const std::vector<error_record> getErrorList();
+    const std::vector<error_record>& getErrorList();
 
     /**
      * Remove the errors on the internal list.
      */
     void resetErrorList();
 
-    static std::string errorRecordToString(error_record &rec);
+    static std::string errorRecordToString(const error_record &rec);
 
 
     /**
@@ -229,7 +238,7 @@ class TskAuto {
     * get volume description of the lastly processed volume
     * @return volume description string of the lastly processed volume
     */
-    std::string getCurVsPartDescr() const;
+    const std::string& getCurVsPartDescr() const;
 
     /**
      * get volume flags of the lastly processed volume.
@@ -312,6 +321,7 @@ class TskAuto {
     void setStopProcessing();
 };
 
+#pragma GCC diagnostic pop
 
 #endif
 

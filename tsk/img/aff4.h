@@ -15,7 +15,7 @@
 #define _TSK_IMG_AFF4_H
 
 #if HAVE_CONFIG_H
-#include "../tsk_config.h"
+#include "tsk/tsk_config.h"
 #endif
 
 #if HAVE_LIBAFF4
@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 typedef struct {
-  TSK_IMG_INFO img_info;
+  IMG_INFO img_info;
   AFF4_Handle* handle;
   tsk_lock_t read_lock;   ///< Lock for the handle
 } IMG_AFF4_INFO;

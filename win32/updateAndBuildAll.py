@@ -23,9 +23,6 @@ MSBUILD_LOCATIONS = [r'C:/Program Files (x86)/Microsoft Visual Studio/2019/Commu
                      r'C:/Program Files (x86)/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin',
                      r'/cygdrive/c/Program Files (x86)/MSBuild/14.0/Bin/']
 
-
-
-
 MSBUILD = 'MSBuild.exe'
 
 CURRENT_PATH = os.getcwd()
@@ -41,9 +38,11 @@ def find_msbuild():
 
     # Use our hard-coded locations
     for loc in MSBUILD_LOCATIONS:
+        print("Checking",loc,"for",MSBUILD)
         if os.path.exists(loc):
-            msbuild_exe = os.path.join(loc,MSBUILD)
+            msbuild_exe = os.path.join(loc, MSBUILD)
             assert os.path.exists(msbuild_exe)
+            print("found",msbuild_exe)
             return msbuild_exe
     raise FileNotFoundError(f"Could not find {MSBUILD}")
 
@@ -187,7 +186,8 @@ def main():
     buildTSKAll()
 
 class OS:
-  LINUX, MAC, WIN, CYGWIN = range(4)
+    LINUX, MAC, WIN, CYGWIN = range(4)
+
 if __name__ == "__main__":
     global SYS
     if _platform == "linux" or _platform == "linux2":
