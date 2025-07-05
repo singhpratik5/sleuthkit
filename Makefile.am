@@ -813,7 +813,6 @@ ant_args=-Doffline=true
 if CUSTOM_DEFAULT_JAR_LOCATION
 ant_args+= -Ddefault-jar-location="@DEFAULT_JAR_LOCATION@"
 endif
-
 endif
 
 tsk_jar = $(top_builddir)/bindings/java/dist/sleuthkit-$(PACKAGE_VERSION).jar
@@ -878,8 +877,11 @@ endif
 
 clean_java = clean-tsk_jar clean-tsk_caseuco_jar
 
-.PHONY: clean-tsk_jar clean-tsk_caseuco_jar
-endif # End of X_JNI check
+check-java: $(tsk_jar)
+	cd bindings/java; $(ANT) test
+
+.PHONY: clean-tsk_jar clean-tsk_caseuco_jar check-java
+endif
 
 #
 # Docs
