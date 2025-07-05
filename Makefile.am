@@ -881,6 +881,7 @@ check-java: $(tsk_jar)
 	cd bindings/java; $(ANT) test
 
 .PHONY: clean-tsk_jar clean-tsk_caseuco_jar check-java
+endif
 
 #
 # Docs
