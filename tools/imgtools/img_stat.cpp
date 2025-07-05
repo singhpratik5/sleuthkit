@@ -9,16 +9,17 @@
  * This software is distributed under the Common Public License 1.0
  */
 #include "tsk/tsk_tools_i.h"
+#include "tsk/img/tsk_img_i.h"
+
+#include <memory>
 
 static TSK_TCHAR *progname;
 
 static void
 usage()
 {
-    TFPRINTF(stderr,
-        _TSK_T
-        ("usage: %" PRIttocTSK " [-tvV] [-i imgtype] [-b dev_sector_size] image\n"),
-        progname);
+    tsk_fprintf(stderr,
+        "usage: img_stat [-tvV] [-i imgtype] [-b dev_sector_size] image\n");
     tsk_fprintf(stderr, "\t-t: display type only\n");
     tsk_fprintf(stderr,
         "\t-i imgtype: The format of the image file (use '-i list' for list of supported types)\n");
@@ -34,7 +35,6 @@ usage()
 int
 main(int argc, char **argv1)
 {
-    TSK_IMG_INFO *img;
     TSK_IMG_TYPE_ENUM imgtype = TSK_IMG_TYPE_DETECT;
     int ch;
     uint8_t type = 0;
@@ -106,9 +106,12 @@ main(int argc, char **argv1)
         usage();
     }
 
-    if ((img =
-            tsk_img_open(argc - OPTIND, &argv[OPTIND], imgtype,
-                ssize)) == NULL) {
+    std::unique_ptr<TSK_IMG_INFO, decltype(&tsk_img_close)> img{
+        tsk_img_open(argc - OPTIND, &argv[OPTIND], imgtype, ssize),
+        tsk_img_close
+    };
+
+    if (!img) {
         tsk_error_print(stderr);
         exit(1);
     }
@@ -118,9 +121,8 @@ main(int argc, char **argv1)
         tsk_printf("%s\n", str);
     }
     else {
-        img->imgstat(img, stdout);
+        reinterpret_cast<IMG_INFO*>(img.get())->imgstat(img.get(), stdout);
     }
 
-    tsk_img_close(img);
     exit(0);
 }
