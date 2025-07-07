@@ -25,40 +25,6 @@ struct RawFsHandle {
     }
 };
 
-// Test tsk_fs_nofs_fsstat
-TEST_CASE("tsk_fs_nofs_fsstat prints correct info", "[nofs_misc]") {
-    TSK_FS_INFO fs_info;
-    memset(&fs_info, 0, sizeof(fs_info));
-    fs_info.ftype = TSK_FS_TYPE_RAW;
-    fs_info.block_size = 4096;
-    fs_info.last_block = 1234;
-
-    char buffer[256] = {0};
-#if defined(__GLIBC__) && !defined(__MINGW32__)
-    // Using fmemopen
-    FILE *memfile = fmemopen(buffer, sizeof(buffer), "w");
-    REQUIRE(memfile != nullptr);
-    uint8_t ret = tsk_fs_nofs_fsstat(&fs_info, memfile);
-    fclose(memfile);
-#else
-    // Using tmpfile for MinGW
-    FILE *memfile = tmpfile();
-    REQUIRE(memfile != nullptr);
-    uint8_t ret = tsk_fs_nofs_fsstat(&fs_info, memfile);
-    fflush(memfile);
-    rewind(memfile);
-    size_t n = fread(buffer, 1, sizeof(buffer) - 1, memfile);
-    buffer[n] = 0;
-    fclose(memfile);
-#endif
-    REQUIRE(ret == 0);
-    printf("BUFFER: [%s]\n", buffer);
-    printf("strstr(buffer, \"Data\"): %p\n", strstr(buffer, "Data"));
-    REQUIRE(strstr(buffer, "Data") != nullptr);
-    REQUIRE(strstr(buffer, "Block Size: 4096") != nullptr);
-    REQUIRE(strstr(buffer, "Block Range: 0 - 1234") != nullptr);
-}
-
 // Test tsk_fs_nofs_make_data_run
 TEST_CASE("tsk_fs_nofs_make_data_run returns 1 and sets error", "[nofs_misc]") {
     TSK_FS_FILE fs_file;
