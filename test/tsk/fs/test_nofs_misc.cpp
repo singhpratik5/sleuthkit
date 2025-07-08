@@ -1,3 +1,12 @@
+/*
+* test_nofs_misc.cpp
+
+*Author: Pratik Singh @singhpratik5
+
+* Unit tests for internal functions common to the "non-file system" file systems
+
+*/
+
 #include "catch.hpp"
 #include "tsk/fs/tsk_fs_i.h"
 #include "tsk/img/tsk_img.h"
