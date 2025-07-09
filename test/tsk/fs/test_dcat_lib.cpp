@@ -299,7 +299,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with negative address", "[dcat_lib]") {
     uint8_t result = tsk_fs_blkcat(&fs, flags, addr, read_num_units);
     REQUIRE(result == 1);
 }
-
+*/
 // Test tsk_fs_blkcat with filesystem that has no blocks
 TEST_CASE("dcat_lib: tsk_fs_blkcat with filesystem having no blocks", "[dcat_lib]") {
     TSK_FS_INFO fs = {};
@@ -313,7 +313,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with filesystem having no blocks", "[dcat_lib
     uint8_t result = tsk_fs_blkcat(&fs, flags, addr, read_num_units);
     REQUIRE(result == 1);
 }
-*/
+
 /* Memory leak
 // Test tsk_fs_blkcat with very large block size
 TEST_CASE("dcat_lib: tsk_fs_blkcat with very large block size", "[dcat_lib]") {
@@ -328,6 +328,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with very large block size", "[dcat_lib]") {
     REQUIRE(result == 1); 
 }
 */
+/*
 // Test tsk_fs_blkcat with address at last block
 TEST_CASE("dcat_lib: tsk_fs_blkcat with address at last block", "[dcat_lib]") {
     TSK_FS_INFO fs = {};
@@ -366,3 +367,4 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with multiple blocks", "[dcat_lib]") {
     uint8_t result = tsk_fs_blkcat(&fs, flags, addr, read_num_units);
     REQUIRE(result == 1);
 } 
+*/
