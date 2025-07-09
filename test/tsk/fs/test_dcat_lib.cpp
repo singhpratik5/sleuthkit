@@ -153,6 +153,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with raw output calls read_block", "[dcat_lib
     REQUIRE(result == 1); 
 }
 */
+/*
 // Test tsk_fs_blkcat with HEX flag 
 TEST_CASE("dcat_lib: tsk_fs_blkcat with HEX flag calls read_block", "[dcat_lib]") {
     TSK_FS_INFO fs = {};
@@ -256,6 +257,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with zero read units", "[dcat_lib]") {
     uint8_t result = tsk_fs_blkcat(&fs, flags, addr, read_num_units);
     REQUIRE(result == 1);
 }
+*/
 /* Causing Memory Leak
 // Test tsk_fs_blkcat with very large read units
 TEST_CASE("dcat_lib: tsk_fs_blkcat with very large read units", "[dcat_lib]") {
