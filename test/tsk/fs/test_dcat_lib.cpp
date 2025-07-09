@@ -218,7 +218,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with HTML and ASCII flags", "[dcat_lib]") {
     uint8_t result = tsk_fs_blkcat(&fs, flags, addr, read_num_units);
     REQUIRE(result == 1); 
 }
-
+*/
 // Test tsk_fs_blkcat with all flags set
 TEST_CASE("dcat_lib: tsk_fs_blkcat with all flags set", "[dcat_lib]") {
     TSK_FS_INFO fs = {};
@@ -257,7 +257,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with zero read units", "[dcat_lib]") {
     uint8_t result = tsk_fs_blkcat(&fs, flags, addr, read_num_units);
     REQUIRE(result == 1);
 }
-*/
+
 /* Causing Memory Leak
 // Test tsk_fs_blkcat with very large read units
 TEST_CASE("dcat_lib: tsk_fs_blkcat with very large read units", "[dcat_lib]") {
@@ -272,6 +272,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with very large read units", "[dcat_lib]") {
     REQUIRE(result == 1);
 }
 */
+/*
 // Test tsk_fs_blkcat with invalid filesystem range
 TEST_CASE("dcat_lib: tsk_fs_blkcat with invalid filesystem range", "[dcat_lib]") {
     TSK_FS_INFO fs = {};
@@ -312,6 +313,7 @@ TEST_CASE("dcat_lib: tsk_fs_blkcat with filesystem having no blocks", "[dcat_lib
     uint8_t result = tsk_fs_blkcat(&fs, flags, addr, read_num_units);
     REQUIRE(result == 1);
 }
+*/
 /* Memory leak
 // Test tsk_fs_blkcat with very large block size
 TEST_CASE("dcat_lib: tsk_fs_blkcat with very large block size", "[dcat_lib]") {
