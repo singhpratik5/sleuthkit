@@ -776,6 +776,7 @@ test_catch_runner_SOURCES = \
 	test/tsk/fs/test_nofs_misc.cpp \
 	test/tsk/fs/test_dcalc_lib.cpp \
 	test/tsk/fs/test_dcat_lib.cpp \
+	test/tsk/fs/test_dls_lib.cpp \
 	test/catch_runner.cpp \
 	vendors/catch.hpp
 
