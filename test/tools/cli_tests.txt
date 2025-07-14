@@ -1,0 +1,6 @@
+# Test Definition File:
+# Format: TestID|CLICommand|ExpectedOutputFilePath|Expected exit code
+# lines beginning with a # are ignored.
+# If a second file test/CLI/fls_test1.stderr is present, it is automatically assumed to be the stderr output of the file.
+# It doesn’t have to be present in the test list.
+fls_0|tools/fstools/fls$EXEEXT|test/tools/output/fls/fls_0.stdout|1|test/tools/output/fls/fls_0.stderr
