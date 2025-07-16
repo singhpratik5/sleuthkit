@@ -325,12 +325,11 @@ int run_all_tests() {
     std::cout << "\nTests run: " << tests_run
         << ", Skipped: " << tests_skipped
         << ", Failed: " << tests_failed << "\n";
-
-    if (tests_skipped > 0) {
-        return 77;
-    }
-    else if (tests_failed > 0) {
+    if (tests_failed > 0) {
         return 1;
+    }
+    else if (tests_skipped > 0) {
+        return 77;
     }
     else {
         return 0;
