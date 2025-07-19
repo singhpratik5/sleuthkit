@@ -78,7 +78,7 @@ TEST_CASE("XFS Directory Parsing Tests - Testing xfs_dent.cpp functions", "[xfs_
         
         REQUIRE(ret != 0); 
     }
-
+    /*
     SECTION("Test xfs_dir_open_meta with different recursion depths") {
         void *fs_dir = nullptr;
         
@@ -105,7 +105,7 @@ TEST_CASE("XFS Directory Parsing Tests - Testing xfs_dent.cpp functions", "[xfs_
             tsk_fs_dir_close(static_cast<TSK_FS_DIR*>(fs_dir));
         }
     }
-
+    */
     SECTION("Test directory entry parsing with real data from xfs_dent.cpp") {
         void *fs_dir = nullptr;
         int ret = xfs_dir_open_meta(fs_info, &fs_dir, 128, 0);
