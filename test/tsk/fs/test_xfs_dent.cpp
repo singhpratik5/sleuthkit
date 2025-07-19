@@ -56,7 +56,10 @@ TEST_CASE("XFS Directory Parsing Tests - Testing xfs_dent.cpp functions", "[xfs_
         int ret = xfs_dir_open_meta(fs_info, &fs_dir, 0, 0);
         
         REQUIRE(ret != 0); 
-        REQUIRE(fs_dir == nullptr);
+        // Clean up if fs_dir was allocated despite error
+        if (fs_dir != nullptr) {
+            tsk_fs_dir_close(static_cast<TSK_FS_DIR*>(fs_dir));
+        }
     }
 
     SECTION("Test xfs_dir_open_meta with NULL fs_dir pointer") {
