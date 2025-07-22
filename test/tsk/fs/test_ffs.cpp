@@ -26,7 +26,7 @@ TEST_CASE("ffs_open_valid_ufs", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -62,7 +62,7 @@ TEST_CASE("ffs_open_error_conditions", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -91,7 +91,7 @@ TEST_CASE("ffs_inode_walk_basic", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -140,7 +140,7 @@ TEST_CASE("ffs_block_walk_basic", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -191,7 +191,7 @@ TEST_CASE("ffs_block_getflags_comprehensive", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -234,7 +234,7 @@ TEST_CASE("ffs_fsstat_basic", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -270,7 +270,7 @@ TEST_CASE("ffs_istat_basic", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -302,7 +302,7 @@ TEST_CASE("ffs_fscheck_basic", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -329,7 +329,7 @@ TEST_CASE("ffs_inode_lookup_basic", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -360,7 +360,7 @@ TEST_CASE("ffs_directory_operations", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
@@ -392,7 +392,7 @@ TEST_CASE("ffs_journal_functions", "[ffs]") {
     std::string test_data_dir = get_test_data_dir();
     std::string ufs_image = test_data_dir + "/ufs/image.E01";
     
-    TSK_IMG_INFO* img = tsk_img_open_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
+    TSK_IMG_INFO* img = tsk_img_open_utf8_sing(ufs_image.c_str(), TSK_IMG_TYPE_DETECT, 0);
     if (!img) {
         WARN("Could not open UFS image: " << ufs_image << ". Skipping test.");
         return;
