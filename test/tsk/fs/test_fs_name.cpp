@@ -434,15 +434,13 @@ struct {
     {"UTC",              946684800, "2000-01-01 00:00:00 (UTC)"},
     {"America/New_York", 946684800, "1999-12-31 19:00:00 (EST)"},
     {"UTC",  1, "1970-01-01 00:00:01 (UTC)"},
-    {"UTC",  0, "0000-00-00 00:00:00 (UTC)"}, // special case!
-    {"UTC", -1, "0000-00-00 00:00:00 (UTC)"}, // another special case!
 #else
     // Mingw seems to not work properly
-    {"UTC",              946684800, "2000-01-01 00:00:00 (UT)"},
+    {"UTC",              946684800, "2000-01-01 00:00:00 (UT)"}, // TZ set by mingw?
     {"UTC",  1, "1970-01-01 00:00:01 (UT)"},
-    {"UTC",  0, "0000-00-00 00:00:00 (UT)"}, // special case!
-    {"UTC", -1, "0000-00-00 00:00:00 (UT)"}, // another special case!
 #endif
+    {"UTC",  0, "0000-00-00 00:00:00 (UTC)"}, // TZ set by TSK
+    {"UTC", -1, "0000-00-00 00:00:00 (UTC)"},// TZ set by TSK
     {nullptr, 0, nullptr}};
 
 TEST_CASE("tsk_fs_time_to_str formats time correctly", "[fs_name]") {
