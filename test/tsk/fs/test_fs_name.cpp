@@ -491,8 +491,8 @@ struct {
     // Mingw does not work properly
     {"UTC", 946684800, 123456789, "2000-01-01 00:00:00.123456789 (UT)"},
     {"UTC",         1, 123456789, "1970-01-01 00:00:01.123456789 (UT)"},
-    {"UTC",         0, 123456789, "0000-00-00 00:00:00 (UTC)"}, // special case!
-    {"UTC",        -1, 123456789, "0000-00-00 00:00:00 (UTC)"}, // another special case!
+    {"UTC",         0, 123456780, "0000-00-00 00:00:00 (UTC)"}, // special case!
+    {"UTC",        -1, 123456781, "0000-00-00 00:00:00 (UTC)"}, // another special case!
 #else
     // POSIX
     {"UTC",  946684800, 123456789, "2000-01-01 00:00:00.123456789 (UTC)"},
@@ -518,7 +518,8 @@ TEST_CASE("tsk_fs_time_to_str_subsecs formats time correctly", "[fs_name]") {
                                        subsec_time_tests[i].subsecs, buf);
             if (strcmp(buf, subsec_time_tests[i].asc_time)!=0){
                 fprintf(stderr,
-                        "FAIL: TZ=%s tsk_fs_time_to_str(%lld,%u, buf) returned '%s' expected '%s'\n",
+                        "FAIL: i=%d TZ=%s tsk_fs_time_to_str(%lld,%u, buf) returned '%s' expected '%s'\n",
+                        i,
                         subsec_time_tests[i].tz,
                          (long long)subsec_time_tests[i].test_time,
                         subsec_time_tests[i].subsecs,
