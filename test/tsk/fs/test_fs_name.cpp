@@ -394,6 +394,9 @@ static int unsetenv([[maybe_unused]] const char *name)
 TEST_CASE("localtime", "[fs_name]") {
     SECTION("TZ=UTC") {
         setenv("TZ","UTC",1);
+#ifdef __MINGW32__
+        _tzset();
+#endif
         const time_t clock = 1;
         struct tm *t =  localtime(&clock);
         const char *at = asctime(t);
@@ -405,8 +408,13 @@ TEST_CASE("localtime", "[fs_name]") {
 #endif
         unsetenv("TZ");
     }
-    SECTION("TZ=EST5EDT") {     // mingw does not understand America/New_York
+
+    // https://unix.stackexchange.com/questions/781989/mingw-msys-2-doesnt-seem-to-recognize-tz-environment-variable
+    SECTION("TZ=EST5EDT") {
         setenv("TZ","EST5EDT",1);
+#ifdef __MINGW32__
+        _tzset();
+#endif
         const time_t clock = 1;
         struct tm *t =  localtime(&clock);
         const char *at = asctime(t);
@@ -443,6 +451,9 @@ TEST_CASE("tsk_fs_time_to_str formats time correctly", "[fs_name]") {
         for (int i=0;time_tests[i].tz!=nullptr; i++){
             char buf[128];
             setenv("TZ",time_tests[i].tz,1);
+#ifdef __MINGW32__
+        _tzset();
+#endif
             tsk_fs_time_to_str(time_tests[i].test_time, buf);
             if (strcmp(buf, time_tests[i].asc_time)!=0){
                 fprintf(stderr,
@@ -489,6 +500,9 @@ TEST_CASE("tsk_fs_time_to_str_subsecs formats time correctly", "[fs_name]") {
         for (int i=0;subsec_time_tests[i].tz!=nullptr; i++){
             char buf[128];
             setenv("TZ",subsec_time_tests[i].tz,1);
+#ifdef __MINGW32__
+        _tzset();
+#endif
             tsk_fs_time_to_str_subsecs(subsec_time_tests[i].test_time,
                                        subsec_time_tests[i].subsecs, buf);
             if (strcmp(buf, subsec_time_tests[i].asc_time)!=0){
