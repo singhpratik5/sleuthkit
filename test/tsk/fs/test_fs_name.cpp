@@ -394,16 +394,20 @@ static int unsetenv([[maybe_unused]] const char *name)
 TEST_CASE("localtime", "[fs_name]") {
     SECTION("TZ=UTC") {
         setenv("TZ","UTC",1);
-        const time_t clock = 0;
+        const time_t clock = 1;
         struct tm *t =  localtime(&clock);
-        REQUIRE( strcmp(asctime(t),"Thu Jan  1 00:00:00 1970\n")==0);
+        const char *at = asctime(t);
+        fprintf(stderr,"TZ=UTC asctime(localtime(1))=%s\n",at);
+        REQUIRE( strcmp(at,"Thu Jan  1 00:00:01 1970\n")==0);
         unsetenv("TZ");
     }
     SECTION("TZ=America/New_York") {
         setenv("TZ","America/New_York",1);
-        const time_t clock = 0;
+        const time_t clock = 1;
         struct tm *t =  localtime(&clock);
-        REQUIRE( strcmp(asctime(t),"Wed Dec 31 19:00:00 1969\n")==0);
+        const char *at = asctime(t);
+        fprintf(stderr,"TZ=America/New_York asctime(localtime(1))=%s\n",at);
+        REQUIRE( strcmp(at,"Wed Dec 31 19:00:01 1969\n")==0);
         unsetenv("TZ");
     }
 }
@@ -431,21 +435,23 @@ struct {
 
 TEST_CASE("tsk_fs_time_to_str formats time correctly", "[fs_name]") {
     SECTION("formats valid time") {
+        int errors = 0;
         for (int i=0;time_tests[i].tz!=nullptr; i++){
             char buf[128];
             setenv("TZ",time_tests[i].tz,1);
             tsk_fs_time_to_str(time_tests[i].test_time, buf);
             if (strcmp(buf, time_tests[i].asc_time)!=0){
                 fprintf(stderr,
-                        "FAIL: TZ=%s tsk_fs_time_to_str(%ld,buf) returned '%s' expected '%s'\n",
+                        "FAIL: TZ=%s tsk_fs_time_to_str(%" PRId64 ",buf) returned '%s' expected '%s'\n",
                         time_tests[i].tz,
-                        time_tests[i].test_time,
+                        (long long)time_tests[i].test_time,
                         buf,
                         time_tests[i].asc_time);
+                errors += 1;
             }
-            REQUIRE(strcmp(buf, time_tests[i].asc_time)==0);
             unsetenv("TZ");
         }
+        REQUIRE(errors==0);
     }
 }
 
@@ -475,6 +481,7 @@ struct {
 
 TEST_CASE("tsk_fs_time_to_str_subsecs formats time correctly", "[fs_name]") {
     SECTION("formats valid time") {
+        int errors = 0;
         for (int i=0;subsec_time_tests[i].tz!=nullptr; i++){
             char buf[128];
             setenv("TZ",subsec_time_tests[i].tz,1);
@@ -482,16 +489,17 @@ TEST_CASE("tsk_fs_time_to_str_subsecs formats time correctly", "[fs_name]") {
                                        subsec_time_tests[i].subsecs, buf);
             if (strcmp(buf, subsec_time_tests[i].asc_time)!=0){
                 fprintf(stderr,
-                        "FAIL: TZ=%s tsk_fs_time_to_str(%ld,%u, buf) returned '%s' expected '%s'\n",
+                        "FAIL: TZ=%s tsk_fs_time_to_str(%" PRId64 ",%u, buf) returned '%s' expected '%s'\n",
                         subsec_time_tests[i].tz,
-                        subsec_time_tests[i].test_time,
+                         (long long)subsec_time_tests[i].test_time,
                         subsec_time_tests[i].subsecs,
                         buf,
                         subsec_time_tests[i].asc_time);
+                errors += 1;
             }
-            REQUIRE(strcmp(buf, subsec_time_tests[i].asc_time)==0);
             unsetenv("TZ");
         }
+        REQUIRE(errors==0);
     }
 }
 
