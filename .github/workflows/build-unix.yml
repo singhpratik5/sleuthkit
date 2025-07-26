@@ -183,6 +183,9 @@ jobs:
         run: |
           ./configure ${{ matrix.configure_opts }}
 
+      - name: Show config file
+        run: cat tsk/tsk_config.h
+
       - name: Unpack and List the test data
         run: |
           cd ..
