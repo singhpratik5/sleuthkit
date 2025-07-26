@@ -160,6 +160,7 @@ TEST_CASE("tsk_fs_attr_set_run with valid parameters", "[fs_attr]") {
     REQUIRE(result == 1);
     
     tsk_fs_attr_free(attr);
+    tsk_fs_attr_run_free(run);
 }
 
 // Test tsk_fs_attr_add_run with valid parameters
@@ -179,6 +180,7 @@ TEST_CASE("tsk_fs_attr_add_run with valid parameters", "[fs_attr]") {
     REQUIRE(result == 0);
     
     tsk_fs_attr_free(attr);
+    tsk_fs_attr_run_free(run1);
 }
 
 // Test tsk_fs_attr_walk with null parameters
