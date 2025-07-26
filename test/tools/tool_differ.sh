@@ -1,5 +1,10 @@
 #!/bin/bash -e
-# usage: tool_differ <command> <
+# usage: tool_differ <command> <expected_output>
+#   <command>: Full command to run, with the following substitutions:
+#     - $EXEEXT is replaced with .exe on Windows
+#     - $DATA_DIR is replaced with ${srcdir}/test/data
+#     - $SLEUTHKIT_TEST_DATA_DIR is replaced with $SLEUTHKIT_TEST_DATA_DIR
+#   <expected_output>: Path to the file containing the expected output for comparison.
 
 # tool_differ program:
 # $1 = full command to run, with
