@@ -20,4 +20,4 @@ all-local:
 CLEANFILES = $(tsk_jar)
 
 clean-local:
-	ant clean
+	ant clean || echo ant not installed

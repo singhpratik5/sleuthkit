@@ -17,4 +17,4 @@ all-local:
 CLEANFILES = $(tsk_caseuco_jar)
 
 clean-local:
-	ant clean
+	ant clean || echo ant not installed
