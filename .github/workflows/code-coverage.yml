@@ -86,8 +86,7 @@ jobs:
       WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
       WINEPREFIX: /home/runner/.wine64
       TZ: UTC
-      GCOV_PREFIX: ${{ github.workspace }}/gcov_out
-      GCOV_PREFIX_STRIP: 4   # strip /home/runner/work/sleuthkit/sleuthkit
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -96,9 +95,9 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt install -y autoconf automake libtool make pkg-config mingw-w64 mingw-w64-tools libz-mingw-w64-dev wine32 wine64 gcovr wget unzip
+          sudo apt install -y autoconf automake libtool make pkg-config \
+            mingw-w64 mingw-w64-tools libz-mingw-w64-dev wine32 wine64 lcov wget unzip
           sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
-          mkdir -p $GCOV_PREFIX
 
       - name: Unpack and List the test data
         run: |
@@ -121,9 +120,9 @@ jobs:
       - name: Build project
         run: make -j2
 
-      - name: Run make check with Wine (generate .gcda in correct paths)
+      - name: Run make check with Wine
         run: |
-          echo "Using GCOV_PREFIX=$GCOV_PREFIX GCOV_PREFIX_STRIP=$GCOV_PREFIX_STRIP"
+          echo "Running tests under Wine..."
           make -j2 check VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1
           for f in $(find test -name '*.log' -o -name '*.trs'); do
             printf '\n%79s\n' | tr ' ' '='
@@ -132,20 +131,19 @@ jobs:
           done
           exit ${result:-0}
 
-      - name: Generate MinGW coverage report
+      - name: Generate MinGW coverage report with lcov
         run: |
-          gcovr -r . --xml-pretty \
-            --object-directory=$GCOV_PREFIX \
-            --gcov-executable x86_64-w64-mingw32-gcov \
-            > coverage-windows.xml
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info
+          lcov --list coverage.info
 
       - name: Upload MinGW Coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage-windows.xml
+          files: coverage.info
           flags: windows-mingw
-          name: sleuthkit-codecov-wine  
+          name: sleuthkit-codecov-wine
 
       - uses: ammaraskar/gcc-problem-matcher@0.2.0
         name: GCC Problem Matcher
