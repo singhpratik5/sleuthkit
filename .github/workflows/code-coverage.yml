@@ -95,19 +95,14 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt install -y autoconf automake libtool make pkg-config \
-            mingw-w64 mingw-w64-tools libz-mingw-w64-dev wine32 wine64 lcov wget unzip
+          sudo apt install -y autoconf automake libtool make pkg-config mingw-w64 mingw-w64-tools \
+            libz-mingw-w64-dev wine32 wine64 wget unzip lcov gcovr
           sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
 
-      - name: Unpack and List the test data
+      - name: Initialize fresh Wine prefix
         run: |
-          cd ..
-          wget -q https://digitalcorpora.s3.amazonaws.com/corpora/drives/tsk-2024/sleuthkit_test_data.zip
-          unzip sleuthkit_test_data.zip
-          cd sleuthkit_test_data
-          make unpack
-          find . -ls | grep -v '[.]git'
-          echo "SLEUTHKIT_TEST_DATA_DIR=$(pwd)" >> $GITHUB_ENV
+          rm -rf "$WINEPREFIX"
+          wineboot --init || true
 
       - name: Bootstrap
         run: ./bootstrap
@@ -115,25 +110,40 @@ jobs:
       - name: Configure with MinGW and coverage flags
         run: |
           ./configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 \
+            --disable-java --enable-shared --disable-static \
             CFLAGS="--coverage" LDFLAGS="--coverage"
+
+      - name: Show config file
+        run: cat tsk/tsk_config.h
+
+      - name: Unpack and List the test data
+        run: |
+          cd ..
+          wget -q https://digitalcorpora.s3.amazonaws.com/corpora/drives/tsk-2024/sleuthkit_test_data.zip
+          unzip -o sleuthkit_test_data.zip
+          cd sleuthkit_test_data
+          make unpack
+          find . -ls | grep -v '[.]git'
+          echo "SLEUTHKIT_TEST_DATA_DIR=$(pwd)" >> $GITHUB_ENV
+          cd ../sleuthkit
 
       - name: Build project
         run: make -j2
 
-      - name: Run make check with Wine
+      - name: Run make check under Wine
         run: |
           echo "Running tests under Wine..."
           make -j2 check VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1
-          for f in $(find test -name '*.log' -o -name '*.trs'); do
+          for i in $(find test -name '*.log'); do
             printf '\n%79s\n' | tr ' ' '='
-            echo "$f"
-            cat "$f"
+            echo "$i"
+            cat "$i"
           done
           exit ${result:-0}
 
       - name: Generate MinGW coverage report with lcov
         run: |
-          lcov --capture --directory . --output-file coverage.info
+          lcov --capture --gcov-tool x86_64-w64-mingw32-gcov --directory . --output-file coverage.info
           lcov --remove coverage.info '/usr/*' --output-file coverage.info
           lcov --list coverage.info
 
