@@ -12,11 +12,13 @@
 #include "catch.hpp"
 
 // Mock decrypt function for testing
-static void mock_decrypt_block(TSK_FS_INFO *fs, TSK_DADDR_T crypto_id, char *buf) {
+static uint8_t mock_decrypt_block(TSK_FS_INFO *fs, TSK_DADDR_T crypto_id, void *data) {
     // XOR decryption for testing
+    char *buf = (char*)data;
     for (size_t i = 0; i < fs->block_size; i++) {
         buf[i] ^= (char)(crypto_id + i);
     }
+    return 0; // Success
 }
 
 // Helper function to create a mock filesystem info structure
@@ -32,7 +34,7 @@ static TSK_FS_INFO* create_mock_fs_info() {
     fs->offset = 0;
     fs->block_pre_size = 0;
     fs->block_post_size = 0;
-    fs->flags = 0;
+    fs->flags = TSK_FS_INFO_FLAG_NONE;
     fs->encryption_type = TSK_FS_ENCRYPTION_TYPE_NONE;
     fs->decrypt_block = nullptr;
     
@@ -74,7 +76,7 @@ TEST_CASE("tsk_fs_read_decrypt bounds checking", "[fs_io]") {
         ssize_t result = tsk_fs_read_decrypt(fs, offset, buffer, 1024, 0);
         
         REQUIRE(result == -1);
-        REQUIRE(tsk_errno == TSK_ERR_FS_READ);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_READ);
         
         free_mock_fs_info(fs);
     }
@@ -93,7 +95,7 @@ TEST_CASE("tsk_fs_read_decrypt bounds checking", "[fs_io]") {
         ssize_t result = tsk_fs_read_decrypt(fs, offset, buffer, 1024, 0);
         
         REQUIRE(result == -1);
-        REQUIRE(tsk_errno == TSK_ERR_FS_READ);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_READ);
         
         free_mock_fs_info(fs);
     }
@@ -112,7 +114,7 @@ TEST_CASE("tsk_fs_read_decrypt bounds checking", "[fs_io]") {
         ssize_t result = tsk_fs_read_decrypt(fs, offset, buffer, 1024, 0);
         
         REQUIRE(result == -1);
-        REQUIRE(tsk_errno == TSK_ERR_FS_READ);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_READ);
         
         free_mock_fs_info(fs);
     }
@@ -257,7 +259,7 @@ TEST_CASE("tsk_fs_read_block_decrypt input validation", "[fs_io]") {
         ssize_t result = tsk_fs_read_block_decrypt(fs, 0, buffer, 1024, 0);
         
         REQUIRE(result == -1);
-        REQUIRE(tsk_errno == TSK_ERR_FS_READ);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_READ);
         
         free_mock_fs_info(fs);
     }
@@ -275,7 +277,7 @@ TEST_CASE("tsk_fs_read_block_decrypt input validation", "[fs_io]") {
         ssize_t result = tsk_fs_read_block_decrypt(fs, addr, buffer, 4096, 0);
         
         REQUIRE(result == -1);
-        REQUIRE(tsk_errno == TSK_ERR_FS_READ);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_READ);
         
         free_mock_fs_info(fs);
     }
@@ -294,7 +296,7 @@ TEST_CASE("tsk_fs_read_block_decrypt input validation", "[fs_io]") {
         ssize_t result = tsk_fs_read_block_decrypt(fs, addr, buffer, 4096, 0);
         
         REQUIRE(result == -1);
-        REQUIRE(tsk_errno == TSK_ERR_FS_READ);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_READ);
         
         free_mock_fs_info(fs);
     }
@@ -313,7 +315,7 @@ TEST_CASE("tsk_fs_read_block_decrypt input validation", "[fs_io]") {
         ssize_t result = tsk_fs_read_block_decrypt(fs, addr, buffer, 4096, 0);
         
         REQUIRE(result == -1);
-        REQUIRE(tsk_errno == TSK_ERR_FS_READ);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_FS_READ);
         
         free_mock_fs_info(fs);
     }
@@ -418,13 +420,15 @@ TEST_CASE("tsk_fs_read with real ext2 image", "[fs_io][integration]") {
     SECTION("reads from ext2 filesystem image") {
         TSK_IMG_INFO *img_info = tsk_img_open_sing("test/data/image_ext2.dd", TSK_IMG_TYPE_DETECT, 0);
         if (img_info == nullptr) {
-            SKIP("Could not open test image");
+            WARN("Could not open test image");
+            return;
         }
         
         TSK_FS_INFO *fs_info = tsk_fs_open_img(img_info, 0, TSK_FS_TYPE_DETECT);
         if (fs_info == nullptr) {
             tsk_img_close(img_info);
-            SKIP("Could not open filesystem");
+            WARN("Could not open filesystem");
+            return;
         }
         
         char buffer[1024];
@@ -442,13 +446,15 @@ TEST_CASE("tsk_fs_read_block with real ext2 image", "[fs_io][integration]") {
     SECTION("reads blocks from ext2 filesystem image") {
         TSK_IMG_INFO *img_info = tsk_img_open_sing("test/data/image_ext2.dd", TSK_IMG_TYPE_DETECT, 0);
         if (img_info == nullptr) {
-            SKIP("Could not open test image");
+            WARN("Could not open test image");
+            return;
         }
         
         TSK_FS_INFO *fs_info = tsk_fs_open_img(img_info, 0, TSK_FS_TYPE_DETECT);
         if (fs_info == nullptr) {
             tsk_img_close(img_info);
-            SKIP("Could not open filesystem");
+            WARN("Could not open filesystem");
+            return;
         }
         
         char buffer[fs_info->block_size];
