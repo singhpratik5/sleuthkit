@@ -106,6 +106,8 @@ void usage(fiwalk &o)
     printf("Ways to make this program run slower:\n");
     printf("    -M = Report MD5 for each file (default on)\n");
     printf("    -1 = Report SHA1 for each file (default on)\n");
+    printf("    -2 = Report SHA256 for each file (default off)\n");
+    printf("    -5 = Report SHA512 for each file (default off)\n");
     printf("    -S nnnn = Perform sector hashes every nnnn bytes\n");
 #ifdef HAVE_LIBMAGIC
     printf("    -f = Enable LIBMAGIC (disabled by default)");
@@ -156,12 +158,16 @@ extern "C" int main(int argc, char * const *argv1) {
     argv = (TSK_TCHAR * const*) argv1;
 #endif
 
-    while ((ch = GETOPT(argc, argv, _TSK_T("A:a:C:dfG:gmv1IMX:S:T:VZn:c:b:xOYzh?"))) > 0 ) { // s: removed
+    while ((ch = GETOPT(argc, argv, _TSK_T("A:a:C:dfG:gmv125IMX:S:T:VZn:c:b:xOYzh?"))) > 0 ) { // s: removed
 	switch (ch) {
 	case _TSK_T('1'): o.opt_sha1 = true;break;
+	case _TSK_T('2'): o.opt_sha256 = true;break;
+	case _TSK_T('5'): o.opt_sha512 = true;break;
 	case _TSK_T('m'):
 	    o.opt_body_file = 1;
 	    o.opt_sha1 = 0;
+	    o.opt_sha256 = 0;
+	    o.opt_sha512 = 0;
 	    o.opt_md5  = 1;
 	    o.t = stdout;
 	    break;
@@ -233,7 +239,12 @@ extern "C" int main(int argc, char * const *argv1) {
             break;
 	    //case 's': save_outdir = optarg; opt_save = true; break;
 	case _TSK_T('v'): tsk_verbose++; break; 			// sleuthkit option
-	case _TSK_T('z'): o.opt_sha1=false; o.opt_md5=false; break;
+	case _TSK_T('z'):
+            o.opt_sha1=false;
+            o.opt_sha256=false;
+            o.opt_sha512=false;
+            o.opt_md5=false;
+            break;
 	case _TSK_T('?'): usage(o);break;
 	default:
 	    fprintf(stderr, "Invalid argument: %" PRIttocTSK "\n", argv[OPTIND]);
