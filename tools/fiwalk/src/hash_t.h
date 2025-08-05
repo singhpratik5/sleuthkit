@@ -132,6 +132,7 @@ using sha1_hasher = legacy_hasher<
 #ifdef HAVE_LIBCRYPTO
 template<const EVP_MD*(*md_src)(), class H>
 class libcrypto_hasher {
+public:
   using hash_t = H;
 
   libcrypto_hasher(): ctx(EVP_MD_CTX_new(), EVP_MD_CTX_free) {}
