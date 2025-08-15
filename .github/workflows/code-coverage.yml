@@ -2,149 +2,109 @@ name: Code Coverage
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - develop-4.14
+    branches: [main, develop, develop-4.14]
   pull_request:
-    branches:
-      - main
-      - develop
-      - develop-4.14
+    branches: [main, develop, develop-4.14]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Determine number of cores
-      run: |
-        CORES=$(nproc)
-        echo "cores=$CORES" >>$GITHUB_OUTPUT
-        echo "Using $CORES cores"
-
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y lcov build-essential autoconf automake libtool
-
-    - name: Unpack and List the test data
-      run: |
-        cd ..
-        pwd
-        wget  -q https://digitalcorpora.s3.amazonaws.com/corpora/drives/tsk-2024/sleuthkit_test_data.zip
-        unzip sleuthkit_test_data.zip
-        cd sleuthkit_test_data
-        make unpack
-        find . -ls | grep -v '[.]git'
-        echo "SLEUTHKIT_TEST_DATA_DIR=$(pwd)" >> $GITHUB_ENV
-
-    - name: Run bootstrap
-      run: |
-        ./bootstrap
-
-    - name: Configure with coverage flags
-      run: |
-        ./configure CFLAGS="--coverage -fprofile-update=atomic" CXXFLAGS="--coverage -fprofile-update=atomic" LDFLAGS="--coverage"
-
-    - name: Show config file
-      run: cat tsk/tsk_config.h
-
-    - name: Build project
-      run: make -j$(nproc)
-
-    - name: Run tests
-      run: make check V=0
-
-    - name: Generate coverage report
-      run: |
-        lcov --capture --directory . --output-file coverage.info
-        lcov --remove coverage.info '/usr/*' --output-file coverage.info
-        lcov --list coverage.info
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: false
-        files: coverage.info
-        flags: unittests
-        name: sleuthkit-codecov
-
-    - uses: ammaraskar/gcc-problem-matcher@0.2.0
-      name: GCC Problem Matcher
-    
-  mingw-wine-coverage:
+  coverage-all:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 70
     env:
       WINEARCH: win64
-      WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
       WINEPREFIX: /home/runner/.wine64
+      WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
       TZ: UTC
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install packages for MinGW + Wine
+      - name: Install deps (Linux + MinGW/Wine)
         run: |
           sudo dpkg --add-architecture i386
           sudo apt update
-          sudo apt install -y autoconf automake libtool make pkg-config \
-            mingw-w64 mingw-w64-tools libz-mingw-w64-dev wine32 wine64 lcov wget unzip
+          sudo apt install -y \
+            build-essential autoconf automake libtool pkg-config lcov \
+            mingw-w64 mingw-w64-tools libz-mingw-w64-dev wine32 wine64 \
+            wget unzip
           sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
 
-      - name: Unpack and List the test data
+      - name: Fetch test data (once)
         run: |
           cd ..
           wget -q https://digitalcorpora.s3.amazonaws.com/corpora/drives/tsk-2024/sleuthkit_test_data.zip
-          unzip sleuthkit_test_data.zip
-          cd sleuthkit_test_data
-          make unpack
+          unzip -q sleuthkit_test_data.zip
+          cd sleuthkit_test_data && make unpack
           find . -ls | grep -v '[.]git'
           echo "SLEUTHKIT_TEST_DATA_DIR=$(pwd)" >> $GITHUB_ENV
 
-      - name: Bootstrap
+      - name: Bootstrap (once)
         run: ./bootstrap
 
-      - name: Configure with MinGW and coverage flags
+      # -------- Linux build/test/coverage --------
+      - name: Linux configure
         run: |
-          ./configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 \
-            CFLAGS="--coverage" LDFLAGS="--coverage"
+          mkdir -p build-linux
+          cd build-linux
+          ../configure \
+            CFLAGS="--coverage -fprofile-update=atomic" \
+            CXXFLAGS="--coverage -fprofile-update=atomic" \
+            LDFLAGS="--coverage"
 
-      - name: Build project
-        run: make -j2
-
-      - name: Run make check with Wine
+      - name: Linux build
         run: |
+          cd build-linux
+          make -j"$(nproc)"
+
+      - name: Linux tests
+        run: |
+          cd build-linux
+          make check V=0
+
+      - name: Linux coverage
+        run: |
+          cd build-linux
+          lcov --capture --directory . --base-directory "$GITHUB_WORKSPACE" --output-file ../coverage.linux.info
+          lcov --remove ../coverage.linux.info '/usr/*' --output-file ../coverage.linux.info
+          lcov --list ../coverage.linux.info
+
+      # -------- MinGW/Wine build/test/coverage --------
+      - name: MinGW configure
+        run: |
+          mkdir -p build-mingw
+          cd build-mingw
+          ../configure --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 \
+            CFLAGS="--coverage" CXXFLAGS="--coverage" LDFLAGS="--coverage"
+
+      - name: MinGW build
+        run: |
+          cd build-mingw
+          make -j2
+
+      - name: MinGW tests under Wine
+        run: |
+          cd build-mingw
           echo "Running tests under Wine..."
-          make -j2 check VERBOSE=1 LOG_COMPILER=scripts/wine_wrapper.sh || result=1
-          for f in $(find test -name '*.log' -o -name '*.trs'); do
+          make -j2 check VERBOSE=1 LOG_COMPILER=../scripts/wine_wrapper.sh || result=1
+          # Print logs once (unique)
+          find ../test -name '*.log' -o -name '*.trs' -print | sort -u | while read -r f; do
             printf '\n%79s\n' | tr ' ' '='
             echo "$f"
             cat "$f"
           done
           exit ${result:-0}
 
-      - name: Generate MinGW coverage report with lcov
+      - name: MinGW coverage
         run: |
-          lcov --capture --directory . --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' --output-file coverage.info
-          lcov --list coverage.info
+          cd build-mingw
+          lcov --capture --directory . --base-directory "$GITHUB_WORKSPACE" --output-file ../coverage.mingw.info
+          lcov --remove ../coverage.mingw.info '/usr/*' --output-file ../coverage.mingw.info
+          lcov --list ../coverage.mingw.info
 
-      - name: Upload MinGW Coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.info
-          flags: windows-mingw
-          name: sleuthkit-codecov-wine
-
-      - uses: ammaraskar/gcc-problem-matcher@0.2.0
-        name: GCC Problem Matcher
-
+      # -------- Merge & upload once --------
+      - name: Merge coverage (dedupe)
+        run: |
+          lcov -a coverage.linux.info -a coverage.mingw.info -o coverage.all.info
+          # Optional: drop extra noise
+          lcov --remove coverage.all.info '*/.git/*' --output-file coverage.all.info || true
+          lcov --list cov
