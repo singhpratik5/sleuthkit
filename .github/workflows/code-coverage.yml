@@ -126,7 +126,7 @@ jobs:
     - name: Generate MinGW coverage report with lcov
       run: |
         cd build-mingw
-        lcov --capture --directory . --output-file mingw-coverage.info
+        lcov --capture --gcov-tool x86_64-w64-mingw32-gcov --directory . --output-file mingw-coverage.info
         lcov --remove mingw-coverage.info '/usr/*' --output-file mingw-coverage.info
         lcov --list mingw-coverage.info
 
