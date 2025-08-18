@@ -17,9 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      WINEARCH: win64
-      WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
-      WINEPREFIX: /home/runner/.wine64
       TZ: UTC
 
     steps:
@@ -84,6 +81,10 @@ jobs:
         lcov --list linux-coverage.info
 
     - name: Configure with MinGW and coverage flags
+      env:
+        WINEARCH: win64
+        WINEPREFIX: /home/runner/.wine64
+        WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
       run: |
         mkdir -p build-mingw
         cd build-mingw
@@ -91,14 +92,26 @@ jobs:
           CFLAGS="--coverage" LDFLAGS="--coverage"
     
     - name: Show config file
+      env:
+        WINEARCH: win64
+        WINEPREFIX: /home/runner/.wine64
+        WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
       run: cat build-mingw/tsk/tsk_config.h
     
     - name: Build project (MinGW)
+      env:
+        WINEARCH: win64
+        WINEPREFIX: /home/runner/.wine64
+        WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
       run: |
         cd build-mingw
         make -j2
 
     - name: Run make check with Wine
+      env:
+        WINEARCH: win64
+        WINEPREFIX: /home/runner/.wine64
+        WINEPATH: Z:\usr\lib\gcc\x86_64-w64-mingw32\13-posix
       run: |
         cd build-mingw
         echo "Running tests under Wine..."
