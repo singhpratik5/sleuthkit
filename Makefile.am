@@ -787,6 +787,7 @@ test_catch_runner_SOURCES = \
 	test/tsk/fs/test_fs_load.cpp \
 	test/tsk/fs/test_fs_dir.cpp \
 	test/tsk/fs/test_fs_file.cpp \
+	test/tsk/fs/test_ext2fs.cpp \
 	test/tools/test_cli_runner.cpp \
 	test/tools/test_utils.cpp \
 	test/tools/tsk_tempfile.h \
