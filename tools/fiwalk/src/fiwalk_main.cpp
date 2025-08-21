@@ -34,7 +34,6 @@
 /* config.h must be first */
 #include "tsk/tsk_tools_i.h"
 
-#include <getopt.h>
 #include <stdio.h>
 #include <sstream>
 
@@ -156,15 +155,9 @@ void usage(fiwalk &o)
 extern "C" int main(int argc, char * const *argv1) {
     int ch;
     fiwalk o;
-    int option_index = 0;
     o.command_line = xml::make_command_line(argc,argv1);
 
     TSK_TCHAR * const *argv;
-
-    static struct option long_options[] = {
-        {"hash", required_argument, 0, 'H'},
-        {0, 0, 0, 0}
-    };
 
 #ifdef TSK_WIN32
     char *opt_arg = NULL;
@@ -179,10 +172,8 @@ extern "C" int main(int argc, char * const *argv1) {
     argv = (TSK_TCHAR * const*) argv1;
 #endif
 
-    while ((ch = getopt_long(argc, argv,
-        _TSK_T("A:a:C:dfG:gmv125IMX:S:T:VZn:c:b:xOYzh?"),
-        long_options, &option_index)) != -1)
-    {
+    while ((ch = GETOPT(argc, argv,
+            _TSK_T("A:a:C:dfG:gmv125IMX:S:T:VZn:c:b:xOYzh?H:"))) > 0) {
         switch (ch) {
         case _TSK_T('1'): o.opt_sha1 = true; break;
         case _TSK_T('H'): {
