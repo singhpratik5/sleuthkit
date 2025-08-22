@@ -121,7 +121,7 @@ void usage(fiwalk &o)
     printf("Ways to make this program run slower:\n");
     printf("    -M = Report MD5 for each file (default on)\n");
     printf("    -1 = Report SHA1 for each file (default on)\n");
-    printf("    --hash alg[,alg...] = Choose one or more hashing algorithms (md5,sha1,sha256,sha512)\n");
+    printf("    -H alg[,alg...] = Choose one or more hashing algorithms (md5,sha1,sha256,sha512)\n");
     printf("    -S nnnn = Perform sector hashes every nnnn bytes\n");
 #ifdef HAVE_LIBMAGIC
     printf("    -f = Enable LIBMAGIC (disabled by default)");
