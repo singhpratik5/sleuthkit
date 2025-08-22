@@ -755,6 +755,12 @@ public final class CaseDbAccessManager {
 			} catch (SQLException ex) {
 				throw new TskCoreException("An error occurred while attempting to optimize the call", ex);
 			}
+			try (Statement optimizeStmt = preparedStatement.connection.createStatement()) {
+				optimizeStmt.executeQuery("ANALYZE");
+				preparedStatement.connection.commitTransaction();
+			} catch (SQLException ex) {
+				throw new TskCoreException("An error occurred while attempting to run ANALYZE", ex);
+			}
 		}
 		
 		select(preparedStatement, queryCallback);
