@@ -250,6 +250,7 @@ TEST_CASE("test ext2fs inode walking and coverage") {
             REQUIRE(fs_file != nullptr);
             REQUIRE(fs_file->meta != nullptr);
             (void)a_ptr;
+            tsk_fs_file_close(fs_file); // change
             return TSK_WALK_CONT;
         };
         
@@ -348,6 +349,8 @@ TEST_CASE("test ext2fs file operations and attributes") {
             }
             
             (void)a_ptr;
+            // Free the fs_file to avoid leaks
+            tsk_fs_file_close(fs_file);
             return TSK_WALK_CONT;
         };
         
@@ -463,6 +466,7 @@ TEST_CASE("test ext2fs error handling and edge cases") {
         auto inode_callback = +[](TSK_FS_FILE *fs_file, void *a_ptr) -> TSK_WALK_RET_ENUM {
             REQUIRE(fs_file != nullptr);
             (void)a_ptr;
+            tsk_fs_file_close(fs_file);
             return TSK_WALK_CONT;
         };
         
