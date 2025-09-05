@@ -1,3 +1,4 @@
+/*
 #include "tsk/base/tsk_os.h"
 #include "tsk/hashdb/tsk_hashdb_i.h"
 #include "catch.hpp"
@@ -21,7 +22,7 @@ namespace {
 
 // Helper to write a minimal valid index file for idx-only databases.
 static void write_minimal_index_file(FILE *f, const char *dbtype_str, const char *db_name,
-                                     const char *hash_entry /* may be nullptr */) {
+                                     const char *hash_entry) {
     fprintf(f, "%s|%s\r\n", "00000000000000000000000000000000000000000", dbtype_str);
     fprintf(f, "%s|%s\r\n", "00000000000000000000000000000000000000001", db_name);
 
@@ -40,14 +41,14 @@ struct HdbCloser {
 };
 
 // Simple callback that counts how many times it was invoked.
-static TSK_WALK_RET_ENUM count_callback(TSK_HDB_INFO * /*hdb_info*/, const char * /*hash*/, const char * /*name*/, void *cb_ptr) {
+static TSK_WALK_RET_ENUM count_callback(TSK_HDB_INFO *, const char * , const char *, void *cb_ptr) {
     int *counter = static_cast<int*>(cb_ptr);
     (*counter)++;
     return TSK_WALK_CONT;
 }
 
 }
-/*
+
 TEST_CASE("idxonly: open md5 index and perform quick and non-quick lookups") {
     std::string base_path;
     FILE *tmp = tsk_make_named_tempfile(&base_path);
