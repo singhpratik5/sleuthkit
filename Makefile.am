@@ -775,6 +775,7 @@ test_catch_runner_SOURCES = \
 	test/tsk/util/test_crypto.cpp \
 	test/tsk/hashdb/test_binsrch_index.cpp \
 	test/tsk/hashdb/test_idxonly.cpp \
+	test/tsk/hashdb/test_incase.cpp \
 	test/tsk/fs/test_fs_name.cpp \
 	test/tsk/fs/test_fs_types.cpp \
 	test/tsk/fs/test_ntfs.cpp \
