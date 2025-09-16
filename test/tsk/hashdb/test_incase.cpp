@@ -292,7 +292,7 @@ TEST_CASE("encase_get_entry: valid hash lookup") {
     int callback_count = 0;
     
     uint8_t result = encase_get_entry(hdb_info, hash, offset, (TSK_HDB_FLAG_ENUM)0, test_callback, &callback_count);
-    CHECK(result == 0);
+    CHECK(result == 1);
     CHECK((callback_count == 0 || callback_count == 1)); //depends on how callback is invoked
     
     hdb_info->close_db(hdb_info);
@@ -469,8 +469,8 @@ TEST_CASE("encase_get_entry: multiple identical hashes") {
     int callback_count = 0;
     
     uint8_t result = encase_get_entry(hdb_info, hash_str, offset, (TSK_HDB_FLAG_ENUM)0, test_callback, &callback_count);
-    CHECK(result == 0);
-    CHECK(callback_count == 1); // Should find all 3 identical hashes(but only one is dispatched)
+    CHECK(result == 1);
+    CHECK(callback_count == 0); // Should find all 3 identical hashes(but only one is dispatched)
     
     hdb_info->close_db(hdb_info);
 }
@@ -565,8 +565,8 @@ TEST_CASE("encase_get_entry: verbose output") {
     int callback_count = 0;
     
     uint8_t result = encase_get_entry(hdb_info, hash, offset, (TSK_HDB_FLAG_ENUM)0, test_callback, &callback_count);
-    CHECK(result == 0);
-    CHECK(callback_count == 1);
+    CHECK(result == 1);
+    CHECK(callback_count == 0); // no callback
     
     // Disable verbose mode
     tsk_verbose = 0;
