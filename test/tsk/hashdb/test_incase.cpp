@@ -37,7 +37,6 @@ static void create_encase_db_file(FILE *f, const std::string &db_name = "TestEnc
     write_utf16le_string(f, db_name, 39);
 
     // Pad until offset 1152
-    long written = 8 + 1024 + (39 * 2);
     long pos = ftell(f);
     if (pos < 1152) {
         std::vector<char> padding(1152 - pos, 0);
