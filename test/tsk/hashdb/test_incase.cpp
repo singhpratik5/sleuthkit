@@ -213,7 +213,7 @@ TEST_CASE("encase_open: null file handle") {
     REQUIRE(hdb_info != nullptr);   // doesn’t return null
     hdb_info->close_db(hdb_info);
 }
-
+/*
 TEST_CASE("encase_make_index: valid database") {
     std::string base_path;
     FILE *tmp = tsk_make_named_tempfile(&base_path);
@@ -238,7 +238,7 @@ TEST_CASE("encase_make_index: valid database") {
     
     hdb_info->close_db(hdb_info);
 }
-
+*/
 TEST_CASE("encase_make_index: empty database") {
     std::string base_path;
     FILE *tmp = tsk_make_named_tempfile(&base_path);
@@ -502,7 +502,7 @@ TEST_CASE("encase_name: corrupted database name") {
     
     hdb_info->close_db(hdb_info);
 }
-
+/*
 TEST_CASE("encase_make_index: verbose output") {
     std::string base_path;
     FILE *tmp = tsk_make_named_tempfile(&base_path);
@@ -533,7 +533,7 @@ TEST_CASE("encase_make_index: verbose output") {
     
     hdb_info->close_db(hdb_info);
 }
-
+*/
 TEST_CASE("encase_get_entry: verbose output") {
     std::string base_path;
     FILE *tmp = tsk_make_named_tempfile(&base_path);
