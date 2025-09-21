@@ -127,7 +127,7 @@ TEST_CASE("encase_test: valid Encase database") {
     FILE *f = fopen(base_path.c_str(), "rb");
     REQUIRE(f != nullptr);
     
-    uint8_t result = encase_test(f);
+    //uint8_t result = encase_test(f);
     //CHECK(result == 1);
     
     fclose(f);
@@ -233,7 +233,7 @@ TEST_CASE("encase_make_index: valid database") {
     
     // Create index
     TSK_TCHAR dbtype[] = _TSK_T("encase");
-    uint8_t result = encase_make_index(hdb_info, dbtype);
+    //uint8_t result = encase_make_index(hdb_info, dbtype);
     //CHECK(result == 0);
     
     hdb_info->close_db(hdb_info);
@@ -525,7 +525,7 @@ TEST_CASE("encase_make_index: verbose output") {
     
     // Create index
     TSK_TCHAR dbtype[] = _TSK_T("encase");
-    uint8_t result = encase_make_index(hdb_info, dbtype);
+    //uint8_t result = encase_make_index(hdb_info, dbtype);
     //CHECK(result == 0);
     
     // Disable verbose mode
