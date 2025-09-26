@@ -16,6 +16,12 @@
 
 #include "test/tools/tsk_tempfile.h"
 
+// includes for Windows-specific string conversion
+#ifdef TSK_WIN32
+#include <locale>
+#include <codecvt>
+#endif
+
 namespace {
 
 // Helper: write a correct HashKeeper header
@@ -107,7 +113,7 @@ static TSK_WALK_RET_ENUM test_lookup_callback_error(TSK_HDB_INFO *hdb_info, cons
 
 TEST_CASE("hk_test with valid HK db")
 {
-	std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_tempfile(), &fclose);
+	std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_tempfile(), &fclose);
 	REQUIRE(f != nullptr);
 	create_hashkeeper_db_file(f.get());
 	CHECK(hk_test(f.get()) == 1);
@@ -115,7 +121,7 @@ TEST_CASE("hk_test with valid HK db")
 
 TEST_CASE("hk_test with invalid db")
 {
-	std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_tempfile(), &fclose);
+	std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_tempfile(), &fclose);
 	REQUIRE(f != nullptr);
 	create_invalid_hashkeeper_db_file(f.get());
 	CHECK(hk_test(f.get()) == 0);
@@ -123,7 +129,7 @@ TEST_CASE("hk_test with invalid db")
 
 TEST_CASE("hk_test with short header")
 {
-	std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_tempfile(), &fclose);
+	std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_tempfile(), &fclose);
 	REQUIRE(f != nullptr);
 	fputs("\"file_id\",\"hashset_id\"\n", f.get());
 	fputs("1,1,\"test1.txt\",\"C:\\\\Windows\\\\System32\",\"0123456789ABCDEF0123456789ABCDEF\",1024,\"2023-01-01\",\"12:00:00\",\"UTC\",\"Test file 1\",\"2023-01-01\",\"12:00:00\"\n", f.get());
@@ -134,11 +140,17 @@ TEST_CASE("hk_test with short header")
 TEST_CASE("hk_open basic")
 {
 	std::string path;
-	std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_named_tempfile(&path), &fclose);
+	std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_named_tempfile(&path), &fclose);
 	REQUIRE(f != nullptr);
 	create_hashkeeper_db_file(f.get());
 
-	TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#ifdef TSK_WIN32
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring wpath = converter.from_bytes(path);
+    TSK_HDB_INFO *hdb = hk_open(f.get(), wpath.c_str());
+#else
+    TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#endif
 	REQUIRE(hdb != nullptr);
 	f.release();
 	CHECK(hdb->db_type == TSK_HDB_DBTYPE_HK_ID);
@@ -150,23 +162,35 @@ TEST_CASE("hk_makeindex ok / empty / malformed")
 	// ok
 	{
 		std::string path;
-		std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_named_tempfile(&path), &fclose);
+		std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_named_tempfile(&path), &fclose);
 		REQUIRE(f != nullptr);
 		create_hashkeeper_db_file(f.get());
-		TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#ifdef TSK_WIN32
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring wpath = converter.from_bytes(path);
+		TSK_HDB_INFO* hdb = hk_open(f.get(), wpath.c_str());
+#else
+		TSK_HDB_INFO* hdb = hk_open(f.get(), path.c_str());
+#endif
 		REQUIRE(hdb != nullptr);
 		f.release();
-	    TSK_TCHAR htype[] = _TSK_T("hk");
-	    CHECK(hk_makeindex(hdb, htype) == 0);
+	    TSK_TCHAR htype[] = _TSK_T("hk");
+	    CHECK(hk_makeindex(hdb, htype) == 0);
 		hdb->close_db(hdb);
 	}
 	// empty → fail
 	{
 		std::string path;
-		std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_named_tempfile(&path), &fclose);
+		std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_named_tempfile(&path), &fclose);
 		REQUIRE(f != nullptr);
 		create_empty_hashkeeper_db_file(f.get());
-		TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#ifdef TSK_WIN32
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring wpath = converter.from_bytes(path);
+		TSK_HDB_INFO* hdb = hk_open(f.get(), wpath.c_str());
+#else
+		TSK_HDB_INFO* hdb = hk_open(f.get(), path.c_str());
+#endif
 		REQUIRE(hdb != nullptr);
 		f.release();
 		TSK_TCHAR htype[] = _TSK_T("hk");
@@ -176,11 +200,17 @@ TEST_CASE("hk_makeindex ok / empty / malformed")
 	// malformed but with at least one valid row → still ok
 	{
 		std::string path;
-	    std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_named_tempfile(&path), &fclose);
-	    REQUIRE(f != nullptr);
-	    create_malformed_hashkeeper_db_file(f.get());
-	    TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
-	    REQUIRE(hdb != nullptr);
+	    std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_named_tempfile(&path), &fclose);
+	    REQUIRE(f != nullptr);
+	    create_malformed_hashkeeper_db_file(f.get());
+#ifdef TSK_WIN32
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring wpath = converter.from_bytes(path);
+		TSK_HDB_INFO* hdb = hk_open(f.get(), wpath.c_str());
+#else
+		TSK_HDB_INFO* hdb = hk_open(f.get(), path.c_str());
+#endif
+	    REQUIRE(hdb != nullptr);
 		f.release();
 		TSK_TCHAR htype[] = _TSK_T("hk");
 		CHECK(hk_makeindex(hdb, htype) == 0);
@@ -191,14 +221,20 @@ TEST_CASE("hk_makeindex ok / empty / malformed")
 TEST_CASE("hk_getentry success and variations")
 {
 	std::string path;
-	std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_named_tempfile(&path), &fclose);
+	std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_named_tempfile(&path), &fclose);
 	REQUIRE(f != nullptr);
 	create_hashkeeper_db_file(f.get());
 
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "0123456789ABCDEF0123456789ABCDEF", &off));
 
-	TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#ifdef TSK_WIN32
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring wpath = converter.from_bytes(path);
+    TSK_HDB_INFO *hdb = hk_open(f.get(), wpath.c_str());
+#else
+    TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#endif
 	REQUIRE(hdb != nullptr);
 	f.release();
 
@@ -224,7 +260,7 @@ TEST_CASE("hk_getentry success and variations")
 		std::vector<std::string> names;
 		CHECK(hk_getentry(hdb, "0123456789ABCDEF0123456789ABCDEF", off, TSK_HDB_FLAG_QUICK, test_lookup_callback_error, &names) == 1);
 	}
-
+	
 	// invalid hash length
 	{
 		std::vector<std::string> names;
@@ -242,14 +278,20 @@ TEST_CASE("hk_getentry success and variations")
 TEST_CASE("hk_getentry same-hash different-names yields two callbacks")
 {
 	std::string path;
-	std::unique_ptr<FILE, decltype(&fclose)> f(tsk_make_named_tempfile(&path), &fclose);
+	std::unique_ptr<FILE, int (*)(FILE*)> f(tsk_make_named_tempfile(&path), &fclose);
 	REQUIRE(f != nullptr);
 	create_same_hash_different_names_hashkeeper_db_file(f.get());
 
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "0123456789ABCDEF0123456789ABCDEF", &off));
 
-	TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#ifdef TSK_WIN32
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring wpath = converter.from_bytes(path);
+    TSK_HDB_INFO *hdb = hk_open(f.get(), wpath.c_str());
+#else
+    TSK_HDB_INFO *hdb = hk_open(f.get(), path.c_str());
+#endif
 	REQUIRE(hdb != nullptr);
 	f.release();
 
@@ -260,5 +302,5 @@ TEST_CASE("hk_getentry same-hash different-names yields two callbacks")
 	std::vector<std::string> names;
 	CHECK(hk_getentry(hdb, "0123456789ABCDEF0123456789ABCDEF", off, TSK_HDB_FLAG_QUICK, test_lookup_callback, &names) == 0);
 	CHECK(names.size() == 2);
-    hdb->close_db(hdb);
+    hdb->close_db(hdb);
 }
