@@ -17,6 +17,9 @@
 #ifndef _TSK_EXT2FS_H
 #define _TSK_EXT2FS_H
 
+#include <cstdint>
+#include "tsk_fs_i.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
