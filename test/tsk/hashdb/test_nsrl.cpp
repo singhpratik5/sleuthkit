@@ -305,10 +305,6 @@ TEST_CASE("nsrl_makeindex format 1 with SHA1")
 	REQUIRE(hdb != nullptr);
 	f.release();
 
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
 
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	CHECK(nsrl_makeindex(hdb, htype) == 0);
@@ -339,11 +335,6 @@ TEST_CASE("nsrl_makeindex format 1 with MD5")
 	REQUIRE(hdb != nullptr);
 	f.release();
 
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
-
 	TSK_TCHAR htype[] = _TSK_T("nsrl-md5");
 	CHECK(nsrl_makeindex(hdb, htype) == 0);
 	hdb->close_db(hdb);
@@ -373,14 +364,6 @@ TEST_CASE("nsrl_makeindex format 2 with SHA1")
 	REQUIRE(hdb != nullptr);
 	f.release();
 
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
-
-	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
-	CHECK(nsrl_makeindex(hdb, htype) == 0);
-	hdb->close_db(hdb);
 }
 
 TEST_CASE("nsrl_makeindex format 2 with MD5")
@@ -406,11 +389,6 @@ TEST_CASE("nsrl_makeindex format 2 with MD5")
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
-
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
 
 	TSK_TCHAR htype[] = _TSK_T("nsrl-md5");
 	CHECK(nsrl_makeindex(hdb, htype) == 0);
@@ -441,11 +419,6 @@ TEST_CASE("nsrl_makeindex empty database should fail")
 	REQUIRE(hdb != nullptr);
 	f.release();
 
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
-
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	CHECK(nsrl_makeindex(hdb, htype) == 1); // Should fail
 	hdb->close_db(hdb);
@@ -474,11 +447,6 @@ TEST_CASE("nsrl_makeindex handles invalid data lines gracefully")
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
-
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
 
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	// Should succeed as invalid lines are skipped
@@ -512,11 +480,6 @@ TEST_CASE("nsrl_getentry format 1 with SHA1")
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
-
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
 
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	REQUIRE(nsrl_makeindex(hdb, htype) == 0);
@@ -566,11 +529,6 @@ TEST_CASE("nsrl_getentry format 1 with MD5")
 	REQUIRE(hdb != nullptr);
 	f.release();
 
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
-
 	TSK_TCHAR htype[] = _TSK_T("nsrl-md5");
 	REQUIRE(nsrl_makeindex(hdb, htype) == 0);
 
@@ -612,11 +570,6 @@ TEST_CASE("nsrl_getentry format 2 with SHA1")
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
-
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
 
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	REQUIRE(nsrl_makeindex(hdb, htype) == 0);
@@ -660,11 +613,6 @@ TEST_CASE("nsrl_getentry format 2 with MD5")
 	REQUIRE(hdb != nullptr);
 	f.release();
 
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
-
 	TSK_TCHAR htype[] = _TSK_T("nsrl-md5");
 	REQUIRE(nsrl_makeindex(hdb, htype) == 0);
 
@@ -706,11 +654,6 @@ TEST_CASE("nsrl_getentry with callbacks - stop and error")
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
-
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
 
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	REQUIRE(nsrl_makeindex(hdb, htype) == 0);
@@ -757,11 +700,6 @@ TEST_CASE("nsrl_getentry with hash not found at offset")
 	REQUIRE(hdb != nullptr);
 	f.release();
 
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
-
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	REQUIRE(nsrl_makeindex(hdb, htype) == 0);
 
@@ -797,11 +735,6 @@ TEST_CASE("nsrl_getentry with invalid offset")
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
-
-	// Ensure hash_type is INVALID so initialization happens properly
-	TSK_HDB_BINSRCH_INFO* binsrch_info = (TSK_HDB_BINSRCH_INFO*)hdb;
-	binsrch_info->hash_type = TSK_HDB_HTYPE_INVALID_ID;
-	binsrch_info->hash_len = 0;
 
 	TSK_TCHAR htype[] = _TSK_T("nsrl-sha1");
 	REQUIRE(nsrl_makeindex(hdb, htype) == 0);
