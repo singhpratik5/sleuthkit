@@ -123,13 +123,13 @@ static void create_nsrl_db_file_invalid_data(FILE* f) {
 	fputs("\"11111111111111111111111111111111111111111\",\"file2.bin\",\"4096\",\"789\",\"012\",\"\",\"22222222222222222222222222222222\",\"11111111\",\"\"\n", f);
 	fflush(f);
 }
-
+/* //Commenting out
 static void create_nsrl_db_file_no_header(FILE* f) {
 	// No header line
 	fputs("\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"11111111111111111111111111111111\",\"aaaaaaaa\",\"file1.bin\",\"1024\",\"123\",\"456\",\"\"\n", f);
 	fflush(f);
 }
-
+*/
 static void create_nsrl_db_file_too_short(FILE* f) {
 	// Line shorter than 45 characters
 	fputs("\"SHA\"\n", f);
