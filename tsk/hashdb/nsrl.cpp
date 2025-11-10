@@ -424,13 +424,13 @@ uint8_t
             }
 
             /* Parse the line */
-            if (hdb_binsrch_info->hash_type & TSK_HDB_HTYPE_SHA1_ID) {
+            if (hdb_binsrch_info->hash_type == TSK_HDB_HTYPE_SHA1_ID) { // Changed '&' to '==' 
                 if (nsrl_parse_sha1(buf, &hash, NULL, ver)) {
                     ig_cnt++;
                     continue;
                 }
             }
-            else if (hdb_binsrch_info->hash_type & TSK_HDB_HTYPE_MD5_ID) {
+            else if (hdb_binsrch_info->hash_type == TSK_HDB_HTYPE_MD5_ID) { // Changed '&' to '=='
                 if (nsrl_parse_md5(buf, &hash, NULL, ver)) {
                     ig_cnt++;
                     continue;
