@@ -47,8 +47,8 @@ static int
     "SHA-1","MD5","CRC32","FileName","FileSize","ProductCode","OpSystemCode","Specia
     lCode"
     */
-    else if ((str[9] == 'M') && (str[16] == 'C') && (str[25] == 'F') &&
-        (str[37] == 'F') && (str[49] == 'P'))
+    else if ((str[9] == 'M') && (str[15] == 'C') && (str[23] == 'F') &&
+        (str[34] == 'F') && (str[45] == 'P'))
         return TSK_HDB_NSRL_FORM2;
 
     tsk_error_reset();
