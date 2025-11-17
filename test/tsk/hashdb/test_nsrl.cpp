@@ -251,7 +251,11 @@ TEST_CASE("nsrl_open basic")
 #endif
 	REQUIRE(f != nullptr);
 	create_nsrl_format1_db_file(f.get());
-
+	
+    // Ensure data is written and file is at beginning
+    fflush(f.get());
+    rewind(f.get());
+	
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -274,6 +278,10 @@ TEST_CASE("nsrl_open format 2")
 	REQUIRE(f != nullptr);
 	create_nsrl_format2_db_file(f.get());
 
+	// Ensure data is written and file is at beginning
+    fflush(f.get());
+    rewind(f.get());
+	
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -300,7 +308,11 @@ TEST_CASE("nsrl_makeindex format 1 with SHA1")
 #endif
 	REQUIRE(f != nullptr);
 	create_nsrl_format1_db_file(f.get());
-
+	
+    // Ensure data is written and file is at beginning
+    fflush(f.get());
+    rewind(f.get());
+	
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -334,7 +346,11 @@ TEST_CASE("nsrl_makeindex format 1 with MD5")
 #endif
 	REQUIRE(f != nullptr);
 	create_nsrl_format1_db_file(f.get());
-
+	
+    // Ensure data is written and file is at beginning
+    fflush(f.get());
+    rewind(f.get());
+	
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -368,7 +384,11 @@ TEST_CASE("nsrl_makeindex format 2 with SHA1")
 #endif
 	REQUIRE(f != nullptr);
 	create_nsrl_format2_db_file(f.get());
-
+	
+    // Ensure data is written and file is at beginning
+    fflush(f.get());
+    rewind(f.get());
+	
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
