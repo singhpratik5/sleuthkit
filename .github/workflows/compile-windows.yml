@@ -42,6 +42,10 @@ jobs:
           choco install nuget.commandline
           choco install ant --ignore-dependencies
 
+      - name: Size of drives
+        run: |
+          Get-CimInstance -Class Win32_LogicalDisk | Select-Object DeviceID, @{Name="Size(GB)";Expression={[Math]::Round($_.Size / 1GB, 2)}}, @{Name="FreeSpace(GB)";Expression={[Math]::Round($_.FreeSpace / 1GB, 2)}}, @{Name="FreeSpace(%)";Expression={[Math]::Round(($_.FreeSpace / $_.Size) * 100, 2)}} | Format-Table -AutoSize
+
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
