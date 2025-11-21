@@ -423,6 +423,10 @@ TEST_CASE("nsrl_makeindex format 2 with MD5")
 	REQUIRE(f != nullptr);
 	create_nsrl_format2_db_file(f.get());
 
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
+
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -457,6 +461,10 @@ TEST_CASE("nsrl_makeindex empty database should fail")
 	REQUIRE(f != nullptr);
 	create_nsrl_db_file_empty(f.get());
 
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
+
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -489,6 +497,10 @@ TEST_CASE("nsrl_makeindex handles invalid data lines gracefully")
 #endif
 	REQUIRE(f != nullptr);
 	create_nsrl_db_file_invalid_data(f.get());
+
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
 
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
@@ -526,6 +538,10 @@ TEST_CASE("nsrl_getentry format 1 with SHA1")
 
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "00000000000000000000000000000000000000000", &off));
+
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
 
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
@@ -579,6 +595,10 @@ TEST_CASE("nsrl_getentry format 1 with MD5")
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "11111111111111111111111111111111", &off));
 
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
+
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -624,6 +644,10 @@ TEST_CASE("nsrl_getentry format 2 with SHA1")
 
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", &off));
+
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
 
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
@@ -671,6 +695,10 @@ TEST_CASE("nsrl_getentry format 2 with MD5")
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "11111111111111111111111111111111", &off));
 
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
+
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -716,6 +744,10 @@ TEST_CASE("nsrl_getentry with callbacks - stop and error")
 
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "00000000000000000000000000000000000000000", &off));
+
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
 
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
@@ -766,6 +798,10 @@ TEST_CASE("nsrl_getentry with hash not found at offset")
 	TSK_OFF_T off = 0;
 	REQUIRE(find_line_offset_for_hash(f.get(), "00000000000000000000000000000000000000000", &off));
 
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
+
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
 	f.release();
@@ -805,6 +841,10 @@ TEST_CASE("nsrl_getentry with invalid offset")
 #endif
 	REQUIRE(f != nullptr);
 	create_nsrl_format1_db_file(f.get());
+
+	// Ensure data is written and file is at beginning
+	fflush(f.get());
+	rewind(f.get());
 
 	TSK_HDB_INFO* hdb = nsrl_open(f.get(), path);
 	REQUIRE(hdb != nullptr);
