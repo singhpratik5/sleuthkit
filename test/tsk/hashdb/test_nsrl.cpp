@@ -81,10 +81,10 @@ static std::wstring string_to_wstring(const std::string& str) {
 static void create_nsrl_format1_db_file(FILE* f) {
 	// Header line
 	fputs("\"SHA-1\",\"FileName\",\"FileSize\",\"ProductCode\",\"OpSystemCode\",\"MD4\",\"MD5\",\"CRC32\",\"SpecialCode\"\n", f);
-	// Data lines
-	fputs("\"00000000000000000000000000000000000000000\",\"file1.bin\",\"1024\",\"123\",\"456\",\"\",\"11111111111111111111111111111111\",\"00000000\",\"\"\n", f);
-	fputs("\"00000000000000000000000000000000000000000\",\"file1_dup.bin\",\"2048\",\"123\",\"456\",\"\",\"11111111111111111111111111111111\",\"00000000\",\"\"\n", f);
-	fputs("\"11111111111111111111111111111111111111111\",\"file2.bin\",\"4096\",\"789\",\"012\",\"\",\"22222222222222222222222222222222\",\"11111111\",\"\"\n", f);
+	// Data lines - SHA1 hashes must be exactly 40 hex characters and NOT all zeros
+	fputs("\"A000000000000000000000000000000000000000\",\"file1.bin\",\"1024\",\"123\",\"456\",\"\",\"11111111111111111111111111111111\",\"00000000\",\"\"\n", f);
+	fputs("\"A000000000000000000000000000000000000000\",\"file1_dup.bin\",\"2048\",\"123\",\"456\",\"\",\"11111111111111111111111111111111\",\"00000000\",\"\"\n", f);
+	fputs("\"B111111111111111111111111111111111111111\",\"file2.bin\",\"4096\",\"789\",\"012\",\"\",\"22222222222222222222222222222222\",\"11111111\",\"\"\n", f);
 	fflush(f);
 }
 
@@ -511,7 +511,7 @@ TEST_CASE("nsrl_getentry format 1 with SHA1")
 	create_nsrl_format1_db_file(f.get());
 
 	TSK_OFF_T off = 0;
-	REQUIRE(find_line_offset_for_hash(f.get(), "00000000000000000000000000000000000000000", &off));
+	REQUIRE(find_line_offset_for_hash(f.get(), "A000000000000000000000000000000000000000", &off));
 
 	// Ensure data is written and file is at beginning
 	fflush(f.get());
@@ -528,7 +528,7 @@ TEST_CASE("nsrl_getentry format 1 with SHA1")
 	// Test successful lookup
 	{
 		std::vector<std::string> names;
-		CHECK(nsrl_getentry(hdb, "00000000000000000000000000000000000000000", off, TSK_HDB_FLAG_QUICK, collect_names_cb, &names) == 0);
+		CHECK(nsrl_getentry(hdb, "A000000000000000000000000000000000000000", off, TSK_HDB_FLAG_QUICK, collect_names_cb, &names) == 0);
 		REQUIRE(names.size() == 2);
 		CHECK((names[0] == "file1.bin" || names[1] == "file1.bin"));
 		CHECK((names[0] == "file1_dup.bin" || names[1] == "file1_dup.bin"));
@@ -705,7 +705,7 @@ TEST_CASE("nsrl_getentry with callbacks - stop and error")
 	create_nsrl_format1_db_file(f.get());
 
 	TSK_OFF_T off = 0;
-	REQUIRE(find_line_offset_for_hash(f.get(), "00000000000000000000000000000000000000000", &off));
+	REQUIRE(find_line_offset_for_hash(f.get(), "A000000000000000000000000000000000000000", &off));
 
 	// Ensure data is written and file is at beginning
 	fflush(f.get());
@@ -722,13 +722,13 @@ TEST_CASE("nsrl_getentry with callbacks - stop and error")
 	// Test stop callback
 	{
 		std::vector<std::string> names;
-		CHECK(nsrl_getentry(hdb, "00000000000000000000000000000000000000000", off, TSK_HDB_FLAG_QUICK, stop_cb, &names) == 0);
+		CHECK(nsrl_getentry(hdb, "A000000000000000000000000000000000000000", off, TSK_HDB_FLAG_QUICK, stop_cb, &names) == 0);
 	}
 
 	// Test error callback
 	{
 		std::vector<std::string> names;
-		CHECK(nsrl_getentry(hdb, "00000000000000000000000000000000000000000", off, TSK_HDB_FLAG_QUICK, error_cb, &names) == 1);
+		CHECK(nsrl_getentry(hdb, "A000000000000000000000000000000000000000", off, TSK_HDB_FLAG_QUICK, error_cb, &names) == 1);
 	}
 
 	hdb->close_db(hdb);
@@ -755,7 +755,7 @@ TEST_CASE("nsrl_getentry with hash not found at offset")
 	create_nsrl_format1_db_file(f.get());
 
 	TSK_OFF_T off = 0;
-	REQUIRE(find_line_offset_for_hash(f.get(), "00000000000000000000000000000000000000000", &off));
+	REQUIRE(find_line_offset_for_hash(f.get(), "A000000000000000000000000000000000000000", &off));
 
 	// Ensure data is written and file is at beginning
 	fflush(f.get());
@@ -813,7 +813,7 @@ TEST_CASE("nsrl_getentry with invalid offset")
 	// Test with offset way beyond file end
 	{
 		std::vector<std::string> names;
-		CHECK(nsrl_getentry(hdb, "00000000000000000000000000000000000000000", 999999, TSK_HDB_FLAG_QUICK, collect_names_cb, &names) == 1);
+		CHECK(nsrl_getentry(hdb, "A000000000000000000000000000000000000000", 999999, TSK_HDB_FLAG_QUICK, collect_names_cb, &names) == 1);
 	}
 
 	hdb->close_db(hdb);
