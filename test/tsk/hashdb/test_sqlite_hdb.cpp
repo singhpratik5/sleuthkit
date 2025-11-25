@@ -19,6 +19,15 @@
 #include <windows.h>
 #endif
 
+// Portable fopen for TSK_TCHAR
+static FILE *tsk_fopen_tchar(const TSK_TCHAR *path, const TSK_TCHAR *mode) {
+#ifdef TSK_WIN32
+    return _wfopen(path, mode);
+#else
+    return fopen(path, mode);
+#endif
+}
+
 // Helper to create temporary file paths
 static std::string get_temp_db_path() {
     static int counter = 0;
@@ -104,7 +113,7 @@ TEST_CASE("sqlite_hdb_create_db creates a new database") {
         CHECK(result == 0);
         
         // Verify file exists
-        FILE *f = TFOPEN(tsk_path, _TSK_T("rb"));
+        FILE *f = tsk_fopen_tchar(tsk_path, _TSK_T("rb"));
         REQUIRE(f != nullptr);
         fclose(f);
         
@@ -136,7 +145,7 @@ TEST_CASE("sqlite_hdb_is_sqlite_file detects SQLite files") {
         // Create a SQLite database
         sqlite_hdb_create_db(tsk_path);
         
-        FILE *f = TFOPEN(tsk_path, _TSK_T("rb"));
+        FILE *f = tsk_fopen_tchar(tsk_path, _TSK_T("rb"));
         REQUIRE(f != nullptr);
         
         uint8_t is_sqlite = sqlite_hdb_is_sqlite_file(f);
