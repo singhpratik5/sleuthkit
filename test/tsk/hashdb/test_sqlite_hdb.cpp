@@ -221,12 +221,14 @@ TEST_CASE("sqlite_hdb_open opens existing database") {
         remove_file(db_path.c_str());
     }
     
-    SECTION("Open non-existent database fails") {
+    SECTION("Open creates database if it doesn't exist") {
+        // SQLite creates the database if it doesn't exist
         TSK_HDB_INFO *hdb_info = sqlite_hdb_open(tsk_path);
-        // Should return NULL or handle error
-        if (hdb_info) {
-            tsk_hdb_close(hdb_info);
-        }
+        // SQLite will create the file, so this should succeed
+        REQUIRE(hdb_info != nullptr);
+        CHECK(hdb_info->db_type == TSK_HDB_DBTYPE_SQLITE_ID);
+        
+        tsk_hdb_close(hdb_info);
         remove_file(db_path.c_str());
     }
 }
