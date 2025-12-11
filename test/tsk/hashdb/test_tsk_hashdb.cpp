@@ -210,6 +210,8 @@ TEST_CASE("tsk_hdb_open with index file path md5", "[tsk_hashdb]") {
         fprintf(idx_f, "00000000000000000000000000000000,0\n");
         fclose(idx_f);
     }
+    // Remove the database file so that IDXONLY is triggered
+    remove_test_file(db_path);
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(idx_path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
@@ -217,7 +219,6 @@ TEST_CASE("tsk_hdb_open with index file path md5", "[tsk_hashdb]") {
         tsk_hdb_close(hdb);
     }
     remove_test_file(idx_path);
-    remove_test_file(db_path);
 }
 
 TEST_CASE("tsk_hdb_open with index file path sha1", "[tsk_hashdb]") {
@@ -229,6 +230,8 @@ TEST_CASE("tsk_hdb_open with index file path sha1", "[tsk_hashdb]") {
         fprintf(idx_f, "0000000000000000000000000000000000000000,0\n");
         fclose(idx_f);
     }
+    // Remove the database file so that IDXONLY is triggered
+    remove_test_file(db_path);
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(idx_path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
@@ -236,7 +239,6 @@ TEST_CASE("tsk_hdb_open with index file path sha1", "[tsk_hashdb]") {
         tsk_hdb_close(hdb);
     }
     remove_test_file(idx_path);
-    remove_test_file(db_path);
 }
 
 TEST_CASE("tsk_hdb_open with IDXONLY flag", "[tsk_hashdb]") {
@@ -344,9 +346,16 @@ TEST_CASE("tsk_hdb_get_idx_path with valid hdb_info", "[tsk_hashdb]") {
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
-        const TSK_TCHAR *result = tsk_hdb_get_idx_path(hdb, TSK_HDB_HTYPE_MD5_ID);
-        // Index path will be generated even if index doesn't exist
-        REQUIRE(result != nullptr);
+        // Create the index first so get_idx_path can return a valid path
+        TSK_TCHAR idx_type[] = _TSK_T("md5");
+        uint8_t make_result = tsk_hdb_make_index(hdb, idx_type);
+        if (make_result == 0) {
+            const TSK_TCHAR *result = tsk_hdb_get_idx_path(hdb, TSK_HDB_HTYPE_MD5_ID);
+            REQUIRE(result != nullptr);
+            // Cleanup index file
+            std::string idx_path = path + "-md5.idx";
+            remove_test_file(idx_path);
+        }
         tsk_hdb_close(hdb);
     }
     remove_test_file(path);
