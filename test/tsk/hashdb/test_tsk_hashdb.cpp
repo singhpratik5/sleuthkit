@@ -134,7 +134,7 @@ TEST_CASE("tsk_hdb_create with valid .kdb extension", "[tsk_hashdb]") {
 
 TEST_CASE("tsk_hdb_open with NULL path", "[tsk_hashdb]") {
     TSK_HDB_INFO *hdb = tsk_hdb_open(NULL, TSK_HDB_OPEN_NONE);
-    REQUIRE(hdb == NULL);
+    REQUIRE(hdb == nullptr);
     REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
 }
 
@@ -142,7 +142,7 @@ TEST_CASE("tsk_hdb_open with non-existent file", "[tsk_hashdb]") {
     std::string path = get_temp_path("nonexistent.txt");
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    REQUIRE(hdb == NULL);
+    REQUIRE(hdb == nullptr);
 }
 
 TEST_CASE("tsk_hdb_open NSRL database", "[tsk_hashdb]") {
@@ -204,24 +204,38 @@ TEST_CASE("tsk_hdb_open SQLite database", "[tsk_hashdb]") {
 TEST_CASE("tsk_hdb_open with index file path md5", "[tsk_hashdb]") {
     std::string db_path = create_md5sum_test_db();
     std::string idx_path = db_path + "-md5.idx";
+    // Create a dummy index file
+    FILE *idx_f = fopen(idx_path.c_str(), "w");
+    if (idx_f) {
+        fprintf(idx_f, "00000000000000000000000000000000,0\n");
+        fclose(idx_f);
+    }
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(idx_path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
         REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
         tsk_hdb_close(hdb);
     }
+    remove_test_file(idx_path);
     remove_test_file(db_path);
 }
 
 TEST_CASE("tsk_hdb_open with index file path sha1", "[tsk_hashdb]") {
     std::string db_path = create_nsrl_test_db();
     std::string idx_path = db_path + "-sha1.idx";
+    // Create a dummy index file
+    FILE *idx_f = fopen(idx_path.c_str(), "w");
+    if (idx_f) {
+        fprintf(idx_f, "0000000000000000000000000000000000000000,0\n");
+        fclose(idx_f);
+    }
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(idx_path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
         REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
         tsk_hdb_close(hdb);
     }
+    remove_test_file(idx_path);
     remove_test_file(db_path);
 }
 
@@ -241,7 +255,7 @@ TEST_CASE("tsk_hdb_open with IDXONLY flag", "[tsk_hashdb]") {
 
 TEST_CASE("tsk_hdb_get_db_path with NULL hdb_info", "[tsk_hashdb]") {
     const TSK_TCHAR *result = tsk_hdb_get_db_path(NULL);
-    REQUIRE(result == 0);
+    REQUIRE(result == nullptr);
     REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
 }
 
@@ -251,7 +265,7 @@ TEST_CASE("tsk_hdb_get_db_path with valid hdb_info", "[tsk_hashdb]") {
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
         const TSK_TCHAR *result = tsk_hdb_get_db_path(hdb);
-        REQUIRE(result != NULL);
+        REQUIRE(result != nullptr);
         tsk_hdb_close(hdb);
     }
     remove_test_file(path);
@@ -263,7 +277,7 @@ TEST_CASE("tsk_hdb_get_db_path with valid hdb_info", "[tsk_hashdb]") {
 
 TEST_CASE("tsk_hdb_get_display_name with NULL hdb_info", "[tsk_hashdb]") {
     const char *result = tsk_hdb_get_display_name(NULL);
-    REQUIRE(result == 0);
+    REQUIRE(result == nullptr);
     REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
 }
 
@@ -273,7 +287,7 @@ TEST_CASE("tsk_hdb_get_display_name with valid hdb_info", "[tsk_hashdb]") {
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
         const char *result = tsk_hdb_get_display_name(hdb);
-        REQUIRE(result != NULL);
+        REQUIRE(result != nullptr);
         REQUIRE(strlen(result) > 0);
         tsk_hdb_close(hdb);
     }
@@ -321,7 +335,7 @@ TEST_CASE("tsk_hdb_uses_external_indexes with SQLite db", "[tsk_hashdb]") {
 
 TEST_CASE("tsk_hdb_get_idx_path with NULL hdb_info", "[tsk_hashdb]") {
     const TSK_TCHAR *result = tsk_hdb_get_idx_path(NULL, TSK_HDB_HTYPE_MD5_ID);
-    REQUIRE(result == 0);
+    REQUIRE(result == nullptr);
     REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
 }
 
@@ -331,7 +345,8 @@ TEST_CASE("tsk_hdb_get_idx_path with valid hdb_info", "[tsk_hashdb]") {
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
     if (hdb) {
         const TSK_TCHAR *result = tsk_hdb_get_idx_path(hdb, TSK_HDB_HTYPE_MD5_ID);
-        REQUIRE(result != NULL);
+        // Index path will be generated even if index doesn't exist
+        REQUIRE(result != nullptr);
         tsk_hdb_close(hdb);
     }
     remove_test_file(path);
