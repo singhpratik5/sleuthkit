@@ -149,10 +149,9 @@ TEST_CASE("tsk_hdb_open NSRL database", "[tsk_hashdb]") {
     std::string path = create_nsrl_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_NSRL_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_NSRL_ID);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -160,10 +159,9 @@ TEST_CASE("tsk_hdb_open md5sum database", "[tsk_hashdb]") {
     std::string path = create_md5sum_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_MD5SUM_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_MD5SUM_ID);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -171,10 +169,9 @@ TEST_CASE("tsk_hdb_open EnCase database", "[tsk_hashdb]") {
     std::string path = create_encase_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_ENCASE_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_ENCASE_ID);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -182,10 +179,9 @@ TEST_CASE("tsk_hdb_open HashKeeper database", "[tsk_hashdb]") {
     std::string path = create_hk_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_HK_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_HK_ID);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -194,10 +190,9 @@ TEST_CASE("tsk_hdb_open SQLite database", "[tsk_hashdb]") {
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     tsk_hdb_create(tpath);
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_SQLITE_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_SQLITE_ID);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -214,10 +209,9 @@ TEST_CASE("tsk_hdb_open with index file path md5", "[tsk_hashdb]") {
     remove_test_file(db_path);
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(idx_path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
+    tsk_hdb_close(hdb);
     remove_test_file(idx_path);
 }
 
@@ -234,21 +228,25 @@ TEST_CASE("tsk_hdb_open with index file path sha1", "[tsk_hashdb]") {
     remove_test_file(db_path);
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(idx_path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
+    tsk_hdb_close(hdb);
     remove_test_file(idx_path);
 }
 
 TEST_CASE("tsk_hdb_open with IDXONLY flag", "[tsk_hashdb]") {
     std::string path = get_temp_path("dummy.txt");
+    FILE *idx_f = fopen(path.c_str(), "w");
+    if (idx_f) {
+        fprintf(idx_f, "00000000000000000000000000000000,0\n");
+        fclose(idx_f);
+    }
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_IDXONLY);
-    if (hdb) {
-        REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    REQUIRE(hdb->db_type == TSK_HDB_DBTYPE_IDXONLY_ID);
+    tsk_hdb_close(hdb);
+    remove_test_file(path);
 }
 
 // ========================================================================
@@ -265,11 +263,10 @@ TEST_CASE("tsk_hdb_get_db_path with valid hdb_info", "[tsk_hashdb]") {
     std::string path = create_md5sum_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        const TSK_TCHAR *result = tsk_hdb_get_db_path(hdb);
-        REQUIRE(result != nullptr);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    const TSK_TCHAR *result = tsk_hdb_get_db_path(hdb);
+    REQUIRE(result != nullptr);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -287,12 +284,11 @@ TEST_CASE("tsk_hdb_get_display_name with valid hdb_info", "[tsk_hashdb]") {
     std::string path = create_md5sum_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        const char *result = tsk_hdb_get_display_name(hdb);
-        REQUIRE(result != nullptr);
-        REQUIRE(strlen(result) > 0);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    const char *result = tsk_hdb_get_display_name(hdb);
+    REQUIRE(result != nullptr);
+    REQUIRE(strlen(result) > 0);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -310,11 +306,10 @@ TEST_CASE("tsk_hdb_uses_external_indexes with text db", "[tsk_hashdb]") {
     std::string path = create_md5sum_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        uint8_t result = tsk_hdb_uses_external_indexes(hdb);
-        REQUIRE(result == 1);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    uint8_t result = tsk_hdb_uses_external_indexes(hdb);
+    REQUIRE(result == 1);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -323,11 +318,10 @@ TEST_CASE("tsk_hdb_uses_external_indexes with SQLite db", "[tsk_hashdb]") {
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     tsk_hdb_create(tpath);
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        uint8_t result = tsk_hdb_uses_external_indexes(hdb);
-        REQUIRE(result == 0);
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    uint8_t result = tsk_hdb_uses_external_indexes(hdb);
+    REQUIRE(result == 0);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
 
@@ -345,18 +339,16 @@ TEST_CASE("tsk_hdb_get_idx_path with valid hdb_info", "[tsk_hashdb]") {
     std::string path = create_md5sum_test_db();
     TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
     TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
-    if (hdb) {
-        // Create the index first so get_idx_path can return a valid path
-        TSK_TCHAR idx_type[] = _TSK_T("md5");
-        uint8_t make_result = tsk_hdb_make_index(hdb, idx_type);
-        if (make_result == 0) {
-            const TSK_TCHAR *result = tsk_hdb_get_idx_path(hdb, TSK_HDB_HTYPE_MD5_ID);
-            REQUIRE(result != nullptr);
-            // Cleanup index file
-            std::string idx_path = path + "-md5.idx";
-            remove_test_file(idx_path);
-        }
-        tsk_hdb_close(hdb);
-    }
+    REQUIRE(hdb != nullptr);
+    // Create the index first so get_idx_path can return a valid path
+    TSK_TCHAR idx_type[] = _TSK_T("md5");
+    uint8_t make_result = tsk_hdb_make_index(hdb, idx_type);
+    REQUIRE(make_result == 0);
+    const TSK_TCHAR *result = tsk_hdb_get_idx_path(hdb, TSK_HDB_HTYPE_MD5_ID);
+    REQUIRE(result != nullptr);
+    // Cleanup index file
+    std::string idx_path = path + "-md5.idx";
+    remove_test_file(idx_path);
+    tsk_hdb_close(hdb);
     remove_test_file(path);
 }
