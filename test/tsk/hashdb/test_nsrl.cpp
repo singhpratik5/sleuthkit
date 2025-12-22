@@ -116,6 +116,7 @@ static void create_nsrl_db_file_invalid_header_format(FILE* f) {
 	fflush(f);
 }
 
+static void create_nsrl_db_file_invalid_data(FILE* f) __attribute__((unused)); // Unused
 static void create_nsrl_db_file_invalid_data(FILE* f) {
 	// Valid header, invalid data
 	fputs("\"SHA-1\",\"FileName\",\"FileSize\",\"ProductCode\",\"OpSystemCode\",\"MD4\",\"MD5\",\"CRC32\",\"SpecialCode\"\n", f);
