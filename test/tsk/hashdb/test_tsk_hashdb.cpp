@@ -375,3 +375,502 @@ TEST_CASE("tsk_hdb_get_idx_path with valid hdb_info", "[tsk_hashdb]") {
     remove_test_file(path);
 }
 */
+
+// ========================================================================
+// Tests for tsk_hdb_is_idx_only
+// ========================================================================
+
+TEST_CASE("tsk_hdb_is_idx_only with NULL hdb_info", "[tsk_hashdb]") {
+    uint8_t result = tsk_hdb_is_idx_only(NULL);
+    REQUIRE(result == 0);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_is_idx_only with regular database", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_is_idx_only(hdb);
+        REQUIRE(result == 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+/*
+TEST_CASE("tsk_hdb_is_idx_only with index only database", "[tsk_hashdb]") {
+    std::string db_path = create_md5sum_test_db();
+    std::string idx_path = db_path + "-md5.idx";
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(idx_path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_is_idx_only(hdb);
+        REQUIRE(result == 1);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(db_path);
+}
+*/
+// ========================================================================
+// Tests for tsk_hdb_make_index
+// ========================================================================
+
+TEST_CASE("tsk_hdb_make_index with NULL hdb_info", "[tsk_hashdb]") {
+    TSK_TCHAR type[] = _TSK_T("md5");
+    uint8_t result = tsk_hdb_make_index(NULL, type);
+    REQUIRE(result == 1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+/*
+TEST_CASE("tsk_hdb_make_index with valid md5sum database", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        TSK_TCHAR type[] = _TSK_T("md5");
+        uint8_t result = tsk_hdb_make_index(hdb, type);
+        REQUIRE(result == 0);
+        std::string idx_path = path + "-md5.idx";
+        remove_test_file(idx_path);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+*/
+// ========================================================================
+// Tests for tsk_hdb_lookup_str
+// ========================================================================
+
+TEST_CASE("tsk_hdb_lookup_str with NULL hdb_info", "[tsk_hashdb]") {
+    int8_t result = tsk_hdb_lookup_str(NULL, "d41d8cd98f00b204e9800998ecf8427e", TSK_HDB_FLAG_QUICK, NULL, NULL);
+    REQUIRE(result == -1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_lookup_str with SQLite database", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        tsk_hdb_add_entry(hdb, "test.txt", "d41d8cd98f00b204e9800998ecf8427e", NULL, NULL, "test comment");
+        int8_t result = tsk_hdb_lookup_str(hdb, "d41d8cd98f00b204e9800998ecf8427e", TSK_HDB_FLAG_QUICK, NULL, NULL);
+        REQUIRE(result >= 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_lookup_raw
+// ========================================================================
+
+TEST_CASE("tsk_hdb_lookup_raw with NULL hdb_info", "[tsk_hashdb]") {
+    uint8_t hash[16] = {0};
+    int8_t result = tsk_hdb_lookup_raw(NULL, hash, 16, TSK_HDB_FLAG_QUICK, NULL, NULL);
+    REQUIRE(result == -1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_lookup_raw with SQLite database", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        tsk_hdb_add_entry(hdb, "test.txt", "d41d8cd98f00b204e9800998ecf8427e", NULL, NULL, "test comment");
+        uint8_t hash[16] = {0xd4, 0x1d, 0x8c, 0xd9, 0x8f, 0x00, 0xb2, 0x04, 0xe9, 0x80, 0x09, 0x98, 0xec, 0xf8, 0x42, 0x7e};
+        int8_t result = tsk_hdb_lookup_raw(hdb, hash, 16, TSK_HDB_FLAG_QUICK, NULL, NULL);
+        REQUIRE(result >= 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_lookup_verbose_str
+// ========================================================================
+
+TEST_CASE("tsk_hdb_lookup_verbose_str with NULL hdb_info", "[tsk_hashdb]") {
+    int result_data = 0;
+    int8_t result = tsk_hdb_lookup_verbose_str(NULL, "d41d8cd98f00b204e9800998ecf8427e", &result_data);
+    REQUIRE(result == -1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_lookup_verbose_str with NULL hash", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        int result_data = 0;
+        int8_t result = tsk_hdb_lookup_verbose_str(hdb, NULL, &result_data);
+        REQUIRE(result == -1);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_lookup_verbose_str with NULL result", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        int8_t result = tsk_hdb_lookup_verbose_str(hdb, "d41d8cd98f00b204e9800998ecf8427e", NULL);
+        REQUIRE(result == -1);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_accepts_updates
+// ========================================================================
+
+TEST_CASE("tsk_hdb_accepts_updates with NULL hdb_info", "[tsk_hashdb]") {
+    uint8_t result = tsk_hdb_accepts_updates(NULL);
+    REQUIRE(result == 0);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_accepts_updates with SQLite database", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_accepts_updates(hdb);
+        REQUIRE(result == 1);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_accepts_updates with text database", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_accepts_updates(hdb);
+        REQUIRE(result == 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_add_entry
+// ========================================================================
+
+TEST_CASE("tsk_hdb_add_entry with NULL hdb_info", "[tsk_hashdb]") {
+    uint8_t result = tsk_hdb_add_entry(NULL, "test.txt", "d41d8cd98f00b204e9800998ecf8427e", NULL, NULL, "comment");
+    REQUIRE(result == 1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_add_entry with SQLite database", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_add_entry(hdb, "test.txt", "d41d8cd98f00b204e9800998ecf8427e", NULL, NULL, "test comment");
+        REQUIRE(result == 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_add_entry with all hash types", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_add_entry(hdb, "test.txt", 
+            "d41d8cd98f00b204e9800998ecf8427e",
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "test comment");
+        REQUIRE(result == 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_add_entry to text database fails", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_add_entry(hdb, "test.txt", "d41d8cd98f00b204e9800998ecf8427e", NULL, NULL, "comment");
+        REQUIRE(result == 1);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_begin_transaction
+// ========================================================================
+
+TEST_CASE("tsk_hdb_begin_transaction with NULL hdb_info", "[tsk_hashdb]") {
+    uint8_t result = tsk_hdb_begin_transaction(NULL);
+    REQUIRE(result == 1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_begin_transaction with SQLite database", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_begin_transaction(hdb);
+        REQUIRE(result == 0);
+        REQUIRE(hdb->transaction_in_progress == 1);
+        tsk_hdb_commit_transaction(hdb);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_begin_transaction twice fails", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result1 = tsk_hdb_begin_transaction(hdb);
+        REQUIRE(result1 == 0);
+        uint8_t result2 = tsk_hdb_begin_transaction(hdb);
+        REQUIRE(result2 == 1);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_PROC);
+        tsk_hdb_commit_transaction(hdb);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_begin_transaction with text database fails", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_begin_transaction(hdb);
+        REQUIRE(result == 1);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_commit_transaction
+// ========================================================================
+
+TEST_CASE("tsk_hdb_commit_transaction with NULL hdb_info", "[tsk_hashdb]") {
+    uint8_t result = tsk_hdb_commit_transaction(NULL);
+    REQUIRE(result == 1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_commit_transaction with SQLite database", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        tsk_hdb_begin_transaction(hdb);
+        uint8_t result = tsk_hdb_commit_transaction(hdb);
+        REQUIRE(result == 0);
+        REQUIRE(hdb->transaction_in_progress == 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_commit_transaction without begin fails", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_commit_transaction(hdb);
+        REQUIRE(result == 1);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_PROC);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_commit_transaction with text database fails", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_commit_transaction(hdb);
+        REQUIRE(result == 1);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_rollback_transaction
+// ========================================================================
+
+TEST_CASE("tsk_hdb_rollback_transaction with NULL hdb_info", "[tsk_hashdb]") {
+    uint8_t result = tsk_hdb_rollback_transaction(NULL);
+    REQUIRE(result == 1);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_rollback_transaction with SQLite database", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        tsk_hdb_begin_transaction(hdb);
+        uint8_t result = tsk_hdb_rollback_transaction(hdb);
+        REQUIRE(result == 0);
+        REQUIRE(hdb->transaction_in_progress == 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_rollback_transaction without begin fails", "[tsk_hashdb]") {
+    std::string path = get_temp_path("test.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_rollback_transaction(hdb);
+        REQUIRE(result == 1);
+        REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_PROC);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("tsk_hdb_rollback_transaction with text database fails", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        uint8_t result = tsk_hdb_rollback_transaction(hdb);
+        REQUIRE(result == 1);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Tests for tsk_hdb_close
+// ========================================================================
+
+TEST_CASE("tsk_hdb_close with NULL hdb_info", "[tsk_hashdb]") {
+    tsk_hdb_close(NULL);
+    REQUIRE(tsk_error_get_errno() == TSK_ERR_HDB_ARG);
+}
+
+TEST_CASE("tsk_hdb_close with valid hdb_info", "[tsk_hashdb]") {
+    std::string path = create_md5sum_test_db();
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+// ========================================================================
+// Additional edge case and integration tests
+// ========================================================================
+
+TEST_CASE("tsk_hdb_open ambiguous database type detection", "[tsk_hashdb]") {
+    std::string path = get_temp_path("ambiguous.txt");
+    FILE *f = fopen(path.c_str(), "w");
+    if (f) {
+        fprintf(f, "d41d8cd98f00b204e9800998ecf8427e  empty.txt\n");
+        fprintf(f, "\"SHA-1\",\"MD5\",\"CRC32\",\"FileName\",\"FileSize\",\"ProductCode\",\"OpSystemCode\",\"SpecialCode\"\n");
+        fclose(f);
+    }
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+
+TEST_CASE("Full workflow: create, add entries, lookup", "[tsk_hashdb]") {
+    std::string path = get_temp_path("workflow.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    uint8_t create_result = tsk_hdb_create(tpath);
+    REQUIRE(create_result == 0);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        REQUIRE(tsk_hdb_accepts_updates(hdb) == 1);
+        REQUIRE(tsk_hdb_begin_transaction(hdb) == 0);
+        REQUIRE(tsk_hdb_add_entry(hdb, "file1.txt", "d41d8cd98f00b204e9800998ecf8427e", NULL, NULL, "comment1") == 0);
+        REQUIRE(tsk_hdb_add_entry(hdb, "file2.txt", "5d41402abc4b2a76b9719d911017c592", NULL, NULL, "comment2") == 0);
+        REQUIRE(tsk_hdb_commit_transaction(hdb) == 0);
+        int8_t lookup_result = tsk_hdb_lookup_str(hdb, "d41d8cd98f00b204e9800998ecf8427e", TSK_HDB_FLAG_QUICK, NULL, NULL);
+        REQUIRE(lookup_result > 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+/*
+TEST_CASE("Transaction rollback test", "[tsk_hashdb]") {
+    std::string path = get_temp_path("rollback.kdb");
+    TSK_TCHAR *tpath = const_cast<TSK_TCHAR*>(STR_TO_TCHAR(path));
+    tsk_hdb_create(tpath);
+    TSK_HDB_INFO *hdb = tsk_hdb_open(tpath, TSK_HDB_OPEN_NONE);
+    if (hdb) {
+        REQUIRE(tsk_hdb_begin_transaction(hdb) == 0);
+        REQUIRE(tsk_hdb_add_entry(hdb, "test.txt", "d41d8cd98f00b204e9800998ecf8427e", NULL, NULL, "comment") == 0);
+        REQUIRE(tsk_hdb_rollback_transaction(hdb) == 0);
+        int8_t lookup_result = tsk_hdb_lookup_str(hdb, "d41d8cd98f00b204e9800998ecf8427e", TSK_HDB_FLAG_QUICK, NULL, NULL);
+        REQUIRE(lookup_result == 0);
+        tsk_hdb_close(hdb);
+    }
+    remove_test_file(path);
+}
+*/
+TEST_CASE("Multiple database types in sequence", "[tsk_hashdb]") {
+    std::string nsrl_path = create_nsrl_test_db();
+    std::string md5sum_path = create_md5sum_test_db();
+    std::string encase_path = create_encase_test_db();
+    std::string hk_path = create_hk_test_db();
+    TSK_HDB_INFO *nsrl_hdb = tsk_hdb_open(const_cast<TSK_TCHAR*>(STR_TO_TCHAR(nsrl_path)), TSK_HDB_OPEN_NONE);
+    TSK_HDB_INFO *md5sum_hdb = tsk_hdb_open(const_cast<TSK_TCHAR*>(STR_TO_TCHAR(md5sum_path)), TSK_HDB_OPEN_NONE);
+    TSK_HDB_INFO *encase_hdb = tsk_hdb_open(const_cast<TSK_TCHAR*>(STR_TO_TCHAR(encase_path)), TSK_HDB_OPEN_NONE);
+    TSK_HDB_INFO *hk_hdb = tsk_hdb_open(const_cast<TSK_TCHAR*>(STR_TO_TCHAR(hk_path)), TSK_HDB_OPEN_NONE);
+    if (nsrl_hdb) {
+        REQUIRE(nsrl_hdb->db_type == TSK_HDB_DBTYPE_NSRL_ID);
+        tsk_hdb_close(nsrl_hdb);
+    }
+    if (md5sum_hdb) {
+        REQUIRE(md5sum_hdb->db_type == TSK_HDB_DBTYPE_MD5SUM_ID);
+        tsk_hdb_close(md5sum_hdb);
+    }
+    if (encase_hdb) {
+        REQUIRE(encase_hdb->db_type == TSK_HDB_DBTYPE_ENCASE_ID);
+        tsk_hdb_close(encase_hdb);
+    }
+    if (hk_hdb) {
+        REQUIRE(hk_hdb->db_type == TSK_HDB_DBTYPE_HK_ID);
+        tsk_hdb_close(hk_hdb);
+    }
+    remove_test_file(nsrl_path);
+    remove_test_file(md5sum_path);
+    remove_test_file(encase_path);
+    remove_test_file(hk_path);
+}
